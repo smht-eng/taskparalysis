@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Focus">
+<meta name="theme-color" content="#0f0f0f">
+<title>Focus — Task Clarity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0f0f;
+  --surface: #181818;
+  --surface2: #222222;
+  --surface3: #2a2a2a;
+  --border: #2e2e2e;
+  --border2: #3a3a3a;
+  --text: #f0ede8;
+  --text2: #8a8680;
+  --text3: #555250;
+  --accent: #c8f57a;
+  --accent-dim: #1e2e0a;
+  --accent-text: #3a5a06;
+  --urgent: #f57a7a;
+  --urgent-dim: #2e0a0a;
+  --medium: #f5c47a;
+  --medium-dim: #2e1e0a;
+  --low: #7ac8f5;
+  --low-dim: #0a1e2e;
+  --done-color: #444;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.5; overflow: hidden; }
+
+/* Layout */
+#app { display: flex; flex-direction: column; height: 100dvh; max-width: 680px; margin: 0 auto; }
+#header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+#header h1 { font-family: var(--mono); font-size: 13px; font-weight: 400; color: var(--text2); letter-spacing: 0.08em; text-transform: uppercase; }
+#header-right { display: flex; align-items: center; gap: 10px; }
+.date-badge { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+/* Nav tabs */
+#nav { display: flex; gap: 2px; padding: 10px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.tab { font-size: 12px; font-weight: 400; font-family: var(--mono); color: var(--text3); padding: 5px 12px; border-radius: 99px; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; letter-spacing: 0.04em; }
+.tab:hover { color: var(--text2); }
+.tab.active { color: var(--accent); border-color: var(--accent-dim); background: var(--accent-dim); }
+
+/* Scrollable content */
+#content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch; }
+#content::-webkit-scrollbar { width: 0; }
+
+/* Pages */
+.page { display: none; flex-direction: column; gap: 16px; }
+.page.active { display: flex; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.card-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; }
+
+/* Brain dump input */
+.dump-row { display: flex; gap: 8px; }
+.dump-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 14px; font-family: var(--sans); font-size: 14px; color: var(--text); outline: none; transition: border-color 0.15s; }
+.dump-row input:focus { border-color: var(--accent); }
+.dump-row input::placeholder { color: var(--text3); }
+.btn { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 16px; font-family: var(--mono); font-size: 12px; color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.04em; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); color: #0f0f0f; border-color: var(--accent); font-weight: 500; }
+.btn.primary:hover { background: #d4f88a; }
+.btn.danger { color: var(--urgent); border-color: transparent; background: transparent; padding: 6px 10px; font-size: 11px; }
+.btn.danger:hover { background: var(--urgent-dim); border-color: var(--urgent); }
+.btn.small { padding: 6px 12px; font-size: 11px; }
+
+/* Dump list */
+.dump-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.dump-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; }
+.dump-item-text { font-size: 14px; color: var(--text); flex: 1; }
+.dump-item-actions { display: flex; gap: 4px; }
+
+/* Task form expand */
+.expand-toggle { font-family: var(--mono); font-size: 11px; color: var(--text3); cursor: pointer; display: flex; align-items: center; gap: 6px; margin-top: 8px; width: fit-content; transition: color 0.15s; letter-spacing: 0.04em; }
+.expand-toggle:hover { color: var(--text2); }
+.expand-toggle .arrow { transition: transform 0.2s; display: inline-block; }
+.expand-toggle.open .arrow { transform: rotate(90deg); }
+.expand-fields { display: none; flex-direction: column; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.expand-fields.open { display: flex; }
+.field-row { display: flex; flex-direction: column; gap: 5px; }
+.field-label { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; }
+.field-row input, .field-row textarea, .field-row select { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 12px; font-family: var(--sans); font-size: 13px; color: var(--text); outline: none; transition: border-color 0.15s; width: 100%; }
+.field-row input:focus, .field-row textarea:focus, .field-row select:focus { border-color: var(--accent); }
+.field-row select option { background: var(--surface2); }
+.field-row textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.eisen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
+.eisen-btn { padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface2); font-size: 11px; font-family: var(--mono); color: var(--text3); cursor: pointer; text-align: center; transition: all 0.15s; line-height: 1.4; }
+.eisen-btn:hover { border-color: var(--border2); color: var(--text2); }
+.eisen-btn.sel-do { background: #1a2e06; border-color: var(--accent); color: var(--accent); }
+.eisen-btn.sel-schedule { background: #0a1e2e; border-color: var(--low); color: var(--low); }
+.eisen-btn.sel-delegate { background: #2e1e0a; border-color: var(--medium); color: var(--medium); }
+.eisen-btn.sel-delete { background: var(--urgent-dim); border-color: var(--urgent); color: var(--urgent); }
+.ice-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.ice-field { display: flex; flex-direction: column; gap: 4px; }
+.ice-field label { font-size: 10px; font-family: var(--mono); color: var(--text3); letter-spacing: 0.06em; }
+.ice-field input[type=range] { width: 100%; accent-color: var(--accent); }
+.ice-val { font-size: 12px; font-family: var(--mono); color: var(--accent); text-align: center; }
+
+/* Task list */
+.task-list { display: flex; flex-direction: column; gap: 8px; }
+.task-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; transition: border-color 0.15s; }
+.task-card:hover { border-color: var(--border2); }
+.task-card.done { opacity: 0.4; }
+.task-card.done .task-title { text-decoration: line-through; color: var(--text3); }
+.task-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.task-title { font-size: 14px; font-weight: 400; color: var(--text); flex: 1; line-height: 1.4; }
+.task-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 99px; font-weight: 400; }
+.tag.urgent { background: var(--urgent-dim); color: var(--urgent); border: 1px solid #4a1010; }
+.tag.medium { background: var(--medium-dim); color: var(--medium); border: 1px solid #4a2e10; }
+.tag.low { background: var(--low-dim); color: var(--low); border: 1px solid #0a2a3a; }
+.tag.done-tag { background: #1a1a1a; color: var(--text3); border: 1px solid var(--border); }
+.tag.eisen { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+.task-why { font-size: 12px; color: var(--text3); font-style: italic; margin-top: 4px; }
+.task-deadline { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.task-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+
+/* Focus mode */
+.focus-header { background: var(--accent-dim); border: 1px solid #2a4a0a; border-radius: var(--radius); padding: 16px; }
+.focus-rank { font-family: var(--mono); font-size: 10px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.focus-title { font-size: 18px; font-weight: 500; color: var(--text); margin-bottom: 4px; line-height: 1.3; }
+.focus-why { font-size: 13px; color: var(--accent); font-style: italic; }
+.microsteps { display: flex; flex-direction: column; gap: 1px; }
+.microstep { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); transition: all 0.2s; cursor: pointer; }
+.microstep:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+.microstep:last-child { border-radius: 0 0 var(--radius) var(--radius); }
+.microstep:only-child { border-radius: var(--radius); }
+.microstep.done-step { opacity: 0.5; }
+.microstep.done-step .ms-text { text-decoration: line-through; color: var(--text3); }
+.ms-num { font-family: var(--mono); font-size: 11px; color: var(--text3); min-width: 18px; margin-top: 2px; }
+.ms-check { width: 16px; height: 16px; border: 1px solid var(--border2); border-radius: 50%; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.microstep.done-step .ms-check { background: var(--accent); border-color: var(--accent); }
+.ms-check-inner { width: 8px; height: 8px; background: #0f0f0f; border-radius: 50%; display: none; }
+.microstep.done-step .ms-check-inner { display: block; }
+.ms-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+/* Pomodoro */
+.pomo-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
+.pomo-timer { font-family: var(--mono); font-size: 52px; font-weight: 300; color: var(--text); letter-spacing: -0.02em; margin: 12px 0; }
+.pomo-timer.break-mode { color: var(--low); }
+.pomo-label { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+.pomo-controls { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+.pomo-ring { position: relative; width: 120px; height: 120px; margin: 0 auto 8px; }
+.pomo-ring svg { transform: rotate(-90deg); }
+.pomo-ring-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: var(--mono); font-size: 22px; font-weight: 300; color: var(--text); }
+.pomo-sessions { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 8px; letter-spacing: 0.08em; }
+.session-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--border2); margin: 0 2px; }
+.session-dot.filled { background: var(--accent); }
+
+/* Time tracker */
+.tracker-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.tracker-row:last-child { border-bottom: none; }
+.tracker-name { font-size: 13px; color: var(--text); flex: 1; }
+.tracker-time { font-family: var(--mono); font-size: 13px; color: var(--accent); min-width: 60px; text-align: right; }
+
+/* AI section */
+.ai-loading { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--text3); padding: 12px 0; }
+.ai-dot { width: 4px; height: 4px; background: var(--accent); border-radius: 50%; animation: pulse 1.2s ease-in-out infinite; }
+.ai-dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse { 0%,100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+.ai-output { font-size: 13px; color: var(--text2); line-height: 1.6; background: var(--surface2); border-radius: var(--radius-sm); padding: 12px 14px; border-left: 2px solid var(--accent); }
+
+/* Priority badge */
+.priority-num { font-family: var(--mono); font-size: 11px; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; white-space: nowrap; }
+
+/* Empty state */
+.empty { text-align: center; padding: 40px 20px; color: var(--text3); font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; }
+
+/* Stats row */
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
+.stat-num { font-family: var(--mono); font-size: 22px; font-weight: 300; color: var(--text); }
+.stat-label { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.08em; margin-top: 2px; }
+
+/* Edit panel */
+.edit-panel { display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); flex-direction:column; gap:10px; }
+.edit-panel.open { display:flex; }
+.edit-row { display:flex; flex-direction:column; gap:4px; }
+.edit-label { font-family:var(--mono); font-size:10px; color:var(--text3); letter-spacing:0.08em; text-transform:uppercase; }
+.edit-row input, .edit-row textarea, .edit-row select { background:var(--surface2); border:1px solid var(--border2); border-radius:var(--radius-sm); padding:8px 12px; font-family:var(--sans); font-size:13px; color:var(--text); outline:none; width:100%; transition:border-color 0.15s; }
+.edit-row input:focus, .edit-row textarea:focus, .edit-row select:focus { border-color:var(--accent); }
+.edit-row select option { background:var(--surface2); }
+.edit-row textarea { resize:vertical; min-height:52px; line-height:1.5; }
+.edit-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.pin-row { display:flex; gap:6px; flex-wrap:wrap; }
+.pin-btn { font-family:var(--mono); font-size:11px; padding:5px 12px; border-radius:99px; border:1px solid var(--border2); background:var(--surface2); color:var(--text3); cursor:pointer; transition:all 0.15s; }
+.pin-btn:hover { color:var(--text2); }
+.pin-btn.pin-1 { background:#2e0a0a; border-color:var(--urgent); color:var(--urgent); }
+.pin-btn.pin-2 { background:var(--medium-dim); border-color:var(--medium); color:var(--medium); }
+.pin-btn.pin-3 { background:var(--low-dim); border-color:var(--low); color:var(--low); }
+.pin-btn.pin-4 { background:var(--surface2); border-color:var(--border2); color:var(--text3); }
+.edit-save { width:100%; padding:9px; border-radius:var(--radius-sm); border:1px solid var(--accent); background:transparent; font-family:var(--mono); font-size:12px; color:var(--accent); cursor:pointer; transition:all 0.15s; letter-spacing:0.04em; }
+.edit-save:hover { background:var(--accent-dim); }
+
+/* Scrollbar none */
+* { scrollbar-width: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <h1>focus</h1>
+    <div id="header-right">
+      <span class="date-badge" id="date-badge"></span>
+      <span id="sync-badge" style="font-family:var(--mono);font-size:10px;letter-spacing:0.06em;transition:color 0.3s"></span>
+    </div>
+  </div>
+  <div id="nav">
+    <div class="tab active" onclick="showPage('dump')">dump</div>
+    <div class="tab" onclick="showPage('tasks')">today</div>
+    <div class="tab" onclick="showPage('all')">all</div>
+    <div class="tab" onclick="showPage('focus')">focus</div>
+    <div class="tab" onclick="showPage('pomo')">pomo</div>
+  </div>
+  <div id="content">
+
+    <!-- DUMP PAGE -->
+    <div class="page active" id="page-dump">
+      <div class="card">
+        <div class="card-label">brain dump — add tasks</div>
+        <div class="dump-row">
+          <input id="dump-input" placeholder="what's in your head? type anything..." onkeydown="if(event.key==='Enter')addDumpItem()" />
+          <button class="btn primary" onclick="addDumpItem()">add</button>
+        </div>
+
+        <div class="expand-toggle" id="detail-toggle" onclick="toggleExpand()">
+          <span class="arrow">▶</span> <span>add detail</span> <span style="color:var(--text3);font-size:10px;">(optional)</span>
+        </div>
+
+        <div class="expand-fields" id="detail-fields">
+          <div class="field-row">
+            <div class="field-label">why are you doing this? what's the impact?</div>
+            <textarea id="f-why" placeholder="e.g. if I don't reply, we lose the contract..." rows="2"></textarea>
+          </div>
+          <div class="two-col">
+            <div class="field-row">
+              <div class="field-label">deadline</div>
+              <input type="datetime-local" id="f-deadline" />
+            </div>
+            <div class="field-row">
+              <div class="field-label">est. duration</div>
+              <select id="f-duration">
+                <option value="">—</option>
+                <option value="5">5 min</option>
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+                <option value="60">1 hour</option>
+                <option value="120">2 hours</option>
+                <option value="240">half day</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">eisenhower matrix <span style="color:var(--text3)">(optional)</span></div>
+            <div class="eisen-grid">
+              <div class="eisen-btn" id="e-do" onclick="selectEisen('do')">urgent + important<br><span style="font-size:9px;opacity:0.7">do now</span></div>
+              <div class="eisen-btn" id="e-schedule" onclick="selectEisen('schedule')">not urgent + important<br><span style="font-size:9px;opacity:0.7">schedule</span></div>
+              <div class="eisen-btn" id="e-delegate" onclick="selectEisen('delegate')">urgent + not important<br><span style="font-size:9px;opacity:0.7">delegate</span></div>
+              <div class="eisen-btn" id="e-delete" onclick="selectEisen('delete')">not urgent + not important<br><span style="font-size:9px;opacity:0.7">drop it</span></div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">ice score <span style="color:var(--text3)">(optional — rate 1–10)</span></div>
+            <div class="ice-row">
+              <div class="ice-field">
+                <label>impact</label>
+                <input type="range" min="1" max="10" value="5" id="ice-i" oninput="updateICE()" step="1">
+                <div class="ice-val" id="ice-i-val">5</div>
+              </div>
+              <div class="ice-field">
+                <label>confidence</label>
+                <input type="range" min="1" max="10" value="5" id="ice-c" oninput="updateICE()" step="1">
+                <div class="ice-val" id="ice-c-val">5</div>
+              </div>
+              <div class="ice-field">
+                <label>ease</label>
+                <input type="range" min="1" max="10" value="5" id="ice-e" oninput="updateICE()" step="1">
+                <div class="ice-val" id="ice-e-val">5</div>
+              </div>
+            </div>
+            <div style="text-align:center;margin-top:4px;">
+              <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">ice score: </span>
+              <span style="font-family:var(--mono);font-size:13px;color:var(--accent)" id="ice-total">125</span>
+            </div>
+            <div style="display:flex;justify-content:center;margin-top:4px;">
+              <label style="font-family:var(--mono);font-size:10px;color:var(--text3);display:flex;align-items:center;gap:6px;cursor:pointer;">
+                <input type="checkbox" id="use-ice" style="accent-color:var(--accent)"> include ice in priority
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="dump-queue-card" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div class="card-label" style="margin:0">queue</div>
+          <button class="btn primary small" onclick="prioritiseAll()">prioritise with AI ↗</button>
+        </div>
+        <div class="dump-list" id="dump-list"></div>
+      </div>
+
+      <div id="ai-prioritise-output" style="display:none">
+        <div class="card-label">ai priority order</div>
+        <div id="ai-prioritise-content"></div>
+      </div>
+    </div>
+
+    <!-- TODAY PAGE -->
+    <div class="page" id="page-tasks">
+      <div class="stats-row">
+        <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">total</div></div>
+        <div class="stat"><div class="stat-num" id="stat-done">0</div><div class="stat-label">done today</div></div>
+        <div class="stat"><div class="stat-num" id="stat-time">0m</div><div class="stat-label">tracked</div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase">today's priority list</div>
+        <div id="ai-rerank-banner" style="display:none;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--accent)">
+          <div class="ai-dot" style="width:5px;height:5px;background:var(--accent);border-radius:50%;animation:pulse 1.2s ease-in-out infinite"></div>ai re-ranking...
+        </div>
+      </div>
+      <div class="task-list" id="task-list">
+        <div class="empty">no tasks yet — brain dump and prioritise</div>
+      </div>
+    </div>
+
+    <!-- ALL TASKS PAGE -->
+    <div class="page" id="page-all">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase">all tasks</div>
+        <button class="btn small" onclick="clearDone()">clear done</button>
+      </div>
+      <div class="task-list" id="all-task-list">
+        <div class="empty">no tasks yet</div>
+      </div>
+    </div>
+
+    <!-- FOCUS PAGE -->
+    <div class="page" id="page-focus">
+      <div id="focus-content">
+        <div class="empty">no tasks yet — add from dump</div>
+      </div>
+    </div>
+
+    <!-- POMO PAGE -->
+    <div class="page" id="page-pomo">
+      <div class="pomo-card">
+        <div class="pomo-label" id="pomo-mode-label">focus session</div>
+        <div class="pomo-ring">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#2a2a2a" stroke-width="6"/>
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#c8f57a" stroke-width="6"
+              stroke-dasharray="326.7" stroke-dashoffset="0" id="pomo-circle" stroke-linecap="round"/>
+          </svg>
+          <div class="pomo-ring-text" id="pomo-display">25:00</div>
+        </div>
+        <div class="pomo-sessions" id="pomo-sessions">
+          <span class="session-dot" id="d0"></span>
+          <span class="session-dot" id="d1"></span>
+          <span class="session-dot" id="d2"></span>
+          <span class="session-dot" id="d3"></span>
+        </div>
+        <div class="pomo-controls">
+          <button class="btn" onclick="resetPomo()">reset</button>
+          <button class="btn primary" id="pomo-btn" onclick="togglePomo()">start</button>
+          <button class="btn" onclick="skipPomo()">skip</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">time tracked today</div>
+        <div id="tracker-list"><div class="empty" style="padding:20px 0">no time tracked yet</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://pqbfxewekymhcijmwzyd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxYmZ4ZXdla3ltaGNpam13enlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1OTM2MjksImV4cCI6MjA5MDE2OTYyOX0.oa6Qhak-Qnwc_Dbg76A7eKmklmvD9iqQ0Wx9vUVzu1k';
+
+const sb = {
+  async get(table) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    if (!res.ok) { console.error('sb.get failed', table, await res.text()); return []; }
+    return res.json();
+  },
+  async upsert(table, row) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=id`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(row)
+    });
+    if (!res.ok) { console.error('sb.upsert failed', table, await res.text()); }
+  }
+};
+
+let tasks = [];
+let dumpItems = [];
+let timeLog = {};
+let selectedEisen = null;
+let useICE = false;
+let activeTimers = {};
+let pomoInterval = null;
+let pomoSeconds = 25 * 60;
+let pomoRunning = false;
+let pomoMode = 'focus';
+let pomoSession = 0;
+let focusTaskId = null;
+let totalPomoFocus = 0;
+let syncTimeout = null;
+
+const POMO_FOCUS = 25 * 60;
+const POMO_BREAK = 5 * 60;
+
+// Debounced save — batches rapid changes into one Supabase write
+function save() {
+  // Always keep localStorage as instant fallback
+  localStorage.setItem('focus_tasks', JSON.stringify(tasks));
+  localStorage.setItem('focus_dump', JSON.stringify(dumpItems));
+  localStorage.setItem('focus_timelog', JSON.stringify(timeLog));
+  // Debounce cloud sync by 800ms
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(syncToCloud, 800);
+}
+
+async function syncToCloud() {
+  try {
+    await sb.upsert('tasks', { id: 1, data: tasks, updated_at: new Date().toISOString() });
+    await sb.upsert('dump_items', { id: 1, data: dumpItems, updated_at: new Date().toISOString() });
+    console.log('[focus] synced to Supabase', new Date().toLocaleTimeString());
+    showSyncBadge('synced');
+  } catch(e) {
+    console.error('[focus] sync failed', e);
+    showSyncBadge('offline');
+  }
+}
+
+async function loadFromCloud() {
+  showSyncBadge('loading');
+  try {
+    const [tasksRows, dumpRows] = await Promise.all([
+      sb.get('tasks'),
+      sb.get('dump_items')
+    ]);
+    console.log('[focus] loaded from Supabase', { tasksRows, dumpRows });
+    if (tasksRows.length > 0) tasks = tasksRows[0].data || [];
+    if (dumpRows.length > 0) dumpItems = dumpRows[0].data || [];
+    timeLog = JSON.parse(localStorage.getItem('focus_timelog') || '{}');
+    showSyncBadge('synced');
+  } catch(e) {
+    console.error('[focus] load failed', e);
+    tasks = JSON.parse(localStorage.getItem('focus_tasks') || '[]');
+    dumpItems = JSON.parse(localStorage.getItem('focus_dump') || '[]');
+    timeLog = JSON.parse(localStorage.getItem('focus_timelog') || '{}');
+    showSyncBadge('offline');
+  }
+}
+
+function showSyncBadge(state) {
+  const badge = document.getElementById('sync-badge');
+  if (!badge) return;
+  const states = {
+    loading: { text: 'syncing...', color: 'var(--text3)' },
+    synced:  { text: 'synced', color: 'var(--accent)' },
+    offline: { text: 'offline', color: 'var(--urgent)' }
+  };
+  const s = states[state] || states.synced;
+  badge.textContent = s.text;
+  badge.style.color = s.color;
+  if (state === 'synced') setTimeout(() => { badge.textContent = ''; }, 2000);
+}
+
+function fmtDate() {
+  const d = new Date();
+  return d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+}
+
+function fmtDeadline(dl) {
+  if (!dl) return '';
+  const d = new Date(dl);
+  const now = new Date();
+  const diff = d - now;
+  if (diff < 0) return 'overdue';
+  if (diff < 3600000) return Math.round(diff/60000) + 'm left';
+  if (diff < 86400000) return Math.round(diff/3600000) + 'h left';
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+
+function fmtTime(ms) {
+  const s = Math.round(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return h + 'h ' + (m % 60) + 'm';
+  return m + 'm ' + (s % 60) + 's';
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const pageEl = document.getElementById('page-' + name);
+  if (pageEl) pageEl.classList.add('active');
+  const label = name === 'tasks' ? 'today' : name === 'all' ? 'all' : name;
+  document.querySelectorAll('.tab').forEach(t => { if (t.textContent === label) t.classList.add('active'); });
+  if (name === 'tasks') renderTasks();
+  if (name === 'all') renderAllTasks();
+  if (name === 'focus') renderFocus();
+  if (name === 'pomo') renderTracker();
+}
+
+function toggleExpand() {
+  const toggle = document.getElementById('detail-toggle');
+  const fields = document.getElementById('detail-fields');
+  toggle.classList.toggle('open');
+  fields.classList.toggle('open');
+}
+
+function selectEisen(type) {
+  selectedEisen = selectedEisen === type ? null : type;
+  ['do','schedule','delegate','delete'].forEach(t => {
+    document.getElementById('e-' + t).className = 'eisen-btn' + (selectedEisen === t ? ' sel-' + t : '');
+  });
+}
+
+function updateICE() {
+  const i = parseInt(document.getElementById('ice-i').value);
+  const c = parseInt(document.getElementById('ice-c').value);
+  const e = parseInt(document.getElementById('ice-e').value);
+  document.getElementById('ice-i-val').textContent = i;
+  document.getElementById('ice-c-val').textContent = c;
+  document.getElementById('ice-e-val').textContent = e;
+  document.getElementById('ice-total').textContent = i * c * e;
+}
+
+function addDumpItem() {
+  const input = document.getElementById('dump-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const why = document.getElementById('f-why').value.trim();
+  const deadline = document.getElementById('f-deadline').value;
+  const duration = document.getElementById('f-duration').value;
+  const useIce = document.getElementById('use-ice').checked;
+  const iceI = parseInt(document.getElementById('ice-i').value);
+  const iceC = parseInt(document.getElementById('ice-c').value);
+  const iceE = parseInt(document.getElementById('ice-e').value);
+
+  const item = {
+    id: Date.now(),
+    text,
+    why: why || null,
+    deadline: deadline || null,
+    duration: duration ? parseInt(duration) : null,
+    eisen: selectedEisen,
+    ice: useIce ? { i: iceI, c: iceC, e: iceE, score: iceI * iceC * iceE } : null,
+    createdAt: new Date().toISOString()
+  };
+  dumpItems.push(item);
+  save();
+  input.value = '';
+  document.getElementById('f-why').value = '';
+  document.getElementById('f-deadline').value = '';
+  document.getElementById('f-duration').value = '';
+  document.getElementById('use-ice').checked = false;
+  selectedEisen = null;
+  ['do','schedule','delegate','delete'].forEach(t => document.getElementById('e-' + t).className = 'eisen-btn');
+  updateICE();
+  renderDump();
+  input.focus();
+}
+
+function removeDump(id) {
+  dumpItems = dumpItems.filter(i => i.id !== id);
+  save();
+  renderDump();
+}
+
+function renderDump() {
+  const list = document.getElementById('dump-list');
+  const card = document.getElementById('dump-queue-card');
+  if (dumpItems.length === 0) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  list.innerHTML = dumpItems.map(item => `
+    <div class="dump-item">
+      <div style="flex:1">
+        <div class="dump-item-text">${item.text}</div>
+        ${item.why ? `<div style="font-size:11px;color:var(--text3);font-style:italic;margin-top:2px">${item.why}</div>` : ''}
+        ${item.deadline ? `<div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:2px">${fmtDeadline(item.deadline)}</div>` : ''}
+      </div>
+      <div class="dump-item-actions">
+        <button class="btn small" onclick="convertToTask(${item.id})">add →</button>
+        <button class="btn danger small" onclick="removeDump(${item.id})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function convertToTask(id) {
+  const item = dumpItems.find(i => i.id === id);
+  if (!item) return;
+  const task = { ...item, done: false, microsteps: [], trackedMs: 0, trackingStart: null, priority: null, aiReason: null };
+  tasks.push(task);
+  dumpItems = dumpItems.filter(i => i.id !== id);
+  save();
+  renderDump();
+  renderTasks();
+}
+
+function getPriorityScore(t) {
+  let score = 0;
+  if (t.eisen === 'do') score += 1000;
+  else if (t.eisen === 'schedule') score += 500;
+  else if (t.eisen === 'delegate') score += 200;
+  else if (t.eisen === 'delete') score += 0;
+  else score += 300;
+  if (t.deadline) {
+    const diff = new Date(t.deadline) - new Date();
+    if (diff < 0) score += 800;
+    else if (diff < 3600000) score += 600;
+    else if (diff < 86400000) score += 400;
+    else if (diff < 604800000) score += 200;
+  }
+  if (t.ice) score += Math.round(t.ice.score / 10);
+  return score;
+}
+
+function getUrgencyTag(t) {
+  const score = getPriorityScore(t);
+  if (score >= 900) return 'urgent';
+  if (score >= 400) return 'medium';
+  return 'low';
+}
+
+function eisenLabel(e) {
+  if (!e) return null;
+  return { do: 'do now', schedule: 'schedule', delegate: 'delegate', delete: 'drop it' }[e];
+}
+
+function isToday(task) {
+  const today = new Date().toISOString().split('T')[0];
+  const addedToday = task.createdAt && task.createdAt.startsWith(today);
+  const dueToday = task.deadline && task.deadline.startsWith(today);
+  const overdue = task.deadline && new Date(task.deadline) < new Date() && !task.done;
+  return addedToday || dueToday || overdue;
+}
+
+function pinLabel(p) {
+  return { 1:'#1 — do first', 2:'#2 — high', 3:'#3 — normal', 4:'low priority' }[p] || 'set priority';
+}
+
+function renderTaskCard(t, idx, showIdx) {
+  const tag = t.urgencyTag || getUrgencyTag(t);
+  const el = eisenLabel(t.eisen);
+  const dl = fmtDeadline(t.deadline);
+  const isTracking = !!t.trackingStart;
+  const tracked = (t.trackedMs || 0) + (isTracking ? Date.now() - t.trackingStart : 0);
+  const pinClass = t.manualPin ? `pin-${t.manualPin}` : '';
+  const dlVal = t.deadline ? t.deadline.slice(0,16) : '';
+
+  return `
+  <div class="task-card ${t.done ? 'done' : ''}" id="tc-${t.id}">
+    <div class="task-top">
+      <div class="task-title">${t.text}</div>
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+        ${showIdx && !t.done ? `<span class="priority-num">${t.manualPin ? '#'+t.manualPin : '#'+(idx+1)}</span>` : ''}
+        <span class="tag ${t.done ? 'done-tag' : tag}">${t.done ? 'done' : tag}</span>
+        ${!t.done ? `<button class="btn small" onclick="toggleEdit(${t.id})" style="padding:4px 8px;font-size:10px">edit</button>` : ''}
+      </div>
+    </div>
+    ${t.why ? `<div class="task-why">"${t.why}"</div>` : ''}
+    ${t.aiReason ? `<div class="task-why" style="color:var(--accent);font-style:normal;font-size:11px">${t.aiReason}</div>` : ''}
+    <div class="task-meta" style="margin-top:6px">
+      ${el ? `<span class="tag eisen">${el}</span>` : ''}
+      ${t.manualPin ? `<span class="tag" style="background:var(--accent-dim);color:var(--accent);border:1px solid #2a4a0a">pinned</span>` : ''}
+      ${dl ? `<span class="task-deadline">${dl}</span>` : ''}
+      ${t.ice ? `<span class="task-deadline">ice: ${t.ice.score}</span>` : ''}
+      ${tracked > 0 ? `<span class="task-deadline">${fmtTime(tracked)}</span>` : ''}
+    </div>
+    <div class="task-actions">
+      ${!t.done ? `
+        <button class="btn small" onclick="openFocusTask(${t.id})">focus →</button>
+        <button class="btn small" onclick="generateMicrosteps(${t.id})">ai steps ↗</button>
+        ${isTracking
+          ? `<button class="btn small" onclick="stopTimer(${t.id})" style="color:var(--urgent);border-color:var(--urgent)">stop timer</button>`
+          : `<button class="btn small" onclick="startTimer(${t.id})">start timer</button>`}
+        <button class="btn small" onclick="markDone(${t.id})" style="color:var(--accent);border-color:var(--accent)">done ✓</button>
+      ` : `<button class="btn small" onclick="undoTask(${t.id})">undo</button>`}
+      <button class="btn danger small" onclick="deleteTask(${t.id})">✕</button>
+    </div>
+
+    <!-- inline edit panel -->
+    <div class="edit-panel" id="edit-${t.id}">
+      <div class="edit-row">
+        <div class="edit-label">task name</div>
+        <input id="ei-text-${t.id}" value="${t.text.replace(/"/g,'&quot;')}" />
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">why / impact</div>
+        <textarea id="ei-why-${t.id}">${t.why || ''}</textarea>
+      </div>
+      <div class="edit-two">
+        <div class="edit-row">
+          <div class="edit-label">deadline</div>
+          <input type="datetime-local" id="ei-dl-${t.id}" value="${dlVal}" />
+        </div>
+        <div class="edit-row">
+          <div class="edit-label">eisenhower</div>
+          <select id="ei-eisen-${t.id}">
+            <option value="" ${!t.eisen?'selected':''}>— none —</option>
+            <option value="do" ${t.eisen==='do'?'selected':''}>do now</option>
+            <option value="schedule" ${t.eisen==='schedule'?'selected':''}>schedule</option>
+            <option value="delegate" ${t.eisen==='delegate'?'selected':''}>delegate</option>
+            <option value="delete" ${t.eisen==='delete'?'selected':''}>drop it</option>
+          </select>
+        </div>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">manual priority pin <span style="color:var(--text3);font-size:9px">(overrides AI)</span></div>
+        <div class="pin-row">
+          <button class="pin-btn ${t.manualPin===1?'pin-1':''}" onclick="setPin(${t.id},1)">🔴 do first</button>
+          <button class="pin-btn ${t.manualPin===2?'pin-2':''}" onclick="setPin(${t.id},2)">🟡 high</button>
+          <button class="pin-btn ${t.manualPin===3?'pin-3':''}" onclick="setPin(${t.id},3)">🔵 normal</button>
+          <button class="pin-btn ${t.manualPin===4?'pin-4':''}" onclick="setPin(${t.id},4)">⚪ low</button>
+          ${t.manualPin ? `<button class="pin-btn" onclick="setPin(${t.id},null)" style="font-size:10px">clear pin</button>` : ''}
+        </div>
+      </div>
+      <button class="edit-save" onclick="saveEdit(${t.id})">save changes</button>
+    </div>
+
+    ${t.microsteps && t.microsteps.length > 0 ? `
+      <div class="microsteps" style="margin-top:10px">
+        ${t.microsteps.map((ms, i) => `
+          <div class="microstep ${ms.done ? 'done-step' : ''}" onclick="toggleMicrostep(${t.id}, ${i})">
+            <div class="ms-check"><div class="ms-check-inner"></div></div>
+            <div class="ms-text">${ms.text}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+  </div>`;
+}
+
+function toggleEdit(id) {
+  const panel = document.getElementById('edit-' + id);
+  if (!panel) return;
+  panel.classList.toggle('open');
+}
+
+function setPin(id, val) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  t.manualPin = val;
+  t.aiRank = null;
+  save();
+  activeListRefresh();
+}
+
+function saveEdit(id) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  const newText = document.getElementById(`ei-text-${id}`)?.value.trim();
+  const newWhy = document.getElementById(`ei-why-${id}`)?.value.trim();
+  const newDl = document.getElementById(`ei-dl-${id}`)?.value;
+  const newEisen = document.getElementById(`ei-eisen-${id}`)?.value;
+  if (newText) t.text = newText;
+  t.why = newWhy || null;
+  t.deadline = newDl || null;
+  t.eisen = newEisen || null;
+  t.urgencyTag = null;
+  t.aiReason = null;
+  save();
+  activeListRefresh();
+}
+
+function renderTasks() {
+  const list = document.getElementById('task-list');
+  const today = tasks.filter(t => isToday(t));
+  const sorted = [...today].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    if (a.manualPin && b.manualPin) return a.manualPin - b.manualPin;
+    if (a.manualPin) return -1;
+    if (b.manualPin) return 1;
+    if (a.aiRank && b.aiRank) return a.aiRank - b.aiRank;
+    return getPriorityScore(b) - getPriorityScore(a);
+  });
+  if (sorted.length === 0) {
+    list.innerHTML = tasks.length > 0
+      ? '<div class="empty">no tasks added today — brain dump to add more,<br>or check "all" tab</div>'
+      : '<div class="empty">no tasks yet — brain dump and prioritise</div>';
+    updateStats(); return;
+  }
+  list.innerHTML = sorted.map((t, idx) => renderTaskCard(t, idx, true)).join('');
+  updateStats();
+}
+
+function renderAllTasks() {
+  const list = document.getElementById('all-task-list');
+  const sorted = [...tasks].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    if (a.manualPin && b.manualPin) return a.manualPin - b.manualPin;
+    if (a.manualPin) return -1;
+    if (b.manualPin) return 1;
+    return getPriorityScore(b) - getPriorityScore(a);
+  });
+  if (sorted.length === 0) { list.innerHTML = '<div class="empty">no tasks yet</div>'; return; }
+  list.innerHTML = sorted.map((t, idx) => renderTaskCard(t, idx, true)).join('');
+}
+
+function clearDone() {
+  tasks = tasks.filter(t => !t.done);
+  save();
+  renderAllTasks();
+}
+
+function updateStats() {
+  const today = tasks.filter(t => isToday(t));
+  document.getElementById('stat-total').textContent = today.length;
+  document.getElementById('stat-done').textContent = today.filter(t => t.done).length;
+  const total = tasks.reduce((s, t) => s + (t.trackedMs || 0) + (t.trackingStart ? Date.now() - t.trackingStart : 0), 0);
+  document.getElementById('stat-time').textContent = total > 0 ? fmtTime(total) : '0m';
+}
+
+function activeListRefresh() {
+  if (document.getElementById('page-tasks').classList.contains('active')) renderTasks();
+  else if (document.getElementById('page-all').classList.contains('active')) renderAllTasks();
+}
+
+function markDone(id) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  if (t.trackingStart) stopTimer(id);
+  t.done = true;
+  save();
+  activeListRefresh();
+}
+
+function undoTask(id) {
+  const t = tasks.find(t => t.id === id);
+  if (t) { t.done = false; save(); activeListRefresh(); }
+}
+
+function deleteTask(id) {
+  if (activeTimers[id]) { clearInterval(activeTimers[id]); delete activeTimers[id]; }
+  tasks = tasks.filter(t => t.id !== id);
+  save();
+  activeListRefresh();
+}
+
+function toggleMicrostep(taskId, idx) {
+  const t = tasks.find(t => t.id === taskId);
+  if (!t) return;
+  t.microsteps[idx].done = !t.microsteps[idx].done;
+  save();
+  renderTasks();
+  renderFocus();
+}
+
+function startTimer(id) {
+  const t = tasks.find(t => t.id === id);
+  if (!t || t.trackingStart) return;
+  t.trackingStart = Date.now();
+  save();
+  activeTimers[id] = setInterval(() => { updateStats(); }, 1000);
+  renderTasks();
+}
+
+function stopTimer(id) {
+  const t = tasks.find(t => t.id === id);
+  if (!t || !t.trackingStart) return;
+  const elapsed = Date.now() - t.trackingStart;
+  t.trackedMs = (t.trackedMs || 0) + elapsed;
+  t.trackingStart = null;
+  const today = new Date().toISOString().split('T')[0];
+  if (!timeLog[today]) timeLog[today] = {};
+  timeLog[today][id] = (timeLog[today][id] || 0) + elapsed;
+  if (activeTimers[id]) { clearInterval(activeTimers[id]); delete activeTimers[id]; }
+  save();
+  renderTasks();
+  renderTracker();
+}
+
+function renderTracker() {
+  const el = document.getElementById('tracker-list');
+  const today = new Date().toISOString().split('T')[0];
+  const log = timeLog[today] || {};
+  const entries = Object.entries(log).filter(([id]) => tasks.find(t => t.id == id));
+  if (entries.length === 0) { el.innerHTML = '<div class="empty" style="padding:20px 0">no time tracked yet</div>'; return; }
+  el.innerHTML = entries.map(([id, ms]) => {
+    const t = tasks.find(t => t.id == id);
+    return `<div class="tracker-row"><div class="tracker-name">${t ? t.text : 'deleted task'}</div><div class="tracker-time">${fmtTime(ms)}</div></div>`;
+  }).join('');
+}
+
+function openFocusTask(id) {
+  focusTaskId = id;
+  showPage('focus');
+}
+
+function renderFocus() {
+  const el = document.getElementById('focus-content');
+  const pending = tasks.filter(t => !t.done).sort((a, b) => getPriorityScore(b) - getPriorityScore(a));
+  if (pending.length === 0) { el.innerHTML = '<div class="empty">all done — great work today</div>'; return; }
+  const top = focusTaskId ? (tasks.find(t => t.id === focusTaskId) || pending[0]) : pending[0];
+  el.innerHTML = `
+    <div class="focus-header">
+      <div class="focus-rank">your top focus</div>
+      <div class="focus-title">${top.text}</div>
+      ${top.why ? `<div class="focus-why">"${top.why}"</div>` : ''}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn small" onclick="generateMicrosteps(${top.id}, true)">ai micro-steps ↗</button>
+      ${top.trackingStart
+        ? `<button class="btn small" onclick="stopTimer(${top.id});renderFocus()" style="color:var(--urgent);border-color:var(--urgent)">stop timer</button>`
+        : `<button class="btn small" onclick="startTimer(${top.id});renderFocus()">start timer</button>`}
+      <button class="btn small" onclick="markDone(${top.id});focusTaskId=null;renderFocus()" style="color:var(--accent);border-color:var(--accent)">done ✓</button>
+    </div>
+    ${top.microsteps && top.microsteps.length > 0 ? `
+      <div>
+        <div class="card-label">micro-steps</div>
+        <div class="microsteps">
+          ${top.microsteps.map((ms, i) => `
+            <div class="microstep ${ms.done ? 'done-step' : ''}" onclick="toggleMicrostep(${top.id}, ${i});renderFocus()">
+              <div class="ms-num">${i + 1}</div>
+              <div class="ms-check"><div class="ms-check-inner"></div></div>
+              <div class="ms-text">${ms.text}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : '<div class="empty" style="padding:20px 0 0">tap "ai micro-steps" to break this task down</div>'}
+    ${pending.length > 1 ? `
+      <div class="card">
+        <div class="card-label">up next</div>
+        ${pending.slice(1, 4).map((t, i) => `
+          <div class="tracker-row" onclick="focusTaskId=${t.id};renderFocus()" style="cursor:pointer">
+            <div class="tracker-name">${t.text}</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text3)">#${i + 2}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+  `;
+}
+
+async function generateMicrosteps(id, rerenderFocus) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  const placeholder = rerenderFocus
+    ? document.querySelector('#focus-content .microsteps') || document.createElement('div')
+    : document.getElementById(`tc-${id}`);
+  const loader = document.createElement('div');
+  loader.className = 'ai-loading';
+  loader.innerHTML = '<div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>breaking it down...</span>';
+  if (placeholder) placeholder.appendChild(loader);
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: 'You help people with brain fog and task paralysis. Break tasks into the smallest possible steps. Return ONLY a JSON array of strings, no markdown, no preamble. Max 6 steps, max 10 words each. Start with the easiest possible action.',
+        messages: [{
+          role: 'user',
+          content: `Task: "${t.text}"${t.why ? `\nWhy: ${t.why}` : ''}${t.duration ? `\nEstimated time: ${t.duration} min` : ''}\n\nReturn JSON array of micro-steps only.`
+        }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content[0].text.replace(/```json|```/g, '').trim();
+    const steps = JSON.parse(raw);
+    t.microsteps = steps.map(s => ({ text: s, done: false }));
+    save();
+  } catch (e) {
+    t.microsteps = [
+      { text: 'Open what you need to start', done: false },
+      { text: 'Do the first 2 minutes only', done: false },
+      { text: 'Keep going or stop — either is fine', done: false }
+    ];
+    save();
+  }
+  if (rerenderFocus) renderFocus(); else activeListRefresh();
+}
+
+async function prioritiseAll() {
+  if (dumpItems.length === 0) return;
+
+  // Step 1 — instant: math sort and move to tasks immediately
+  dumpItems.forEach(item => convertToTask(item.id));
+  showPage('tasks');
+
+  // Step 2 — background: AI re-ranks with Haiku (fast model)
+  const banner = document.getElementById('ai-rerank-banner');
+  if (banner) banner.style.display = 'flex';
+
+  const snapshot = [...tasks].filter(t => isToday(t) && !t.done);
+  const taskList = snapshot.map((t, i) => `${i + 1}. "${t.text}"${t.why ? ` (why: ${t.why})` : ''}${t.deadline ? ` (due: ${new Date(t.deadline).toLocaleString()})` : ''}${t.eisen ? ` (${t.eisen})` : ''}${t.ice ? ` (ICE:${t.ice.score})` : ''}`).join('\n');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        system: 'Return ONLY a JSON array. Each item: {"id":0_based_index,"rank":1_based,"urgency":"urgent"|"medium"|"low","reason":"max 8 words"}. No markdown.',
+        messages: [{ role: 'user', content: `Prioritise:\n${taskList}` }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content[0].text.replace(/```json|```/g, '').trim();
+    const ranked = JSON.parse(raw);
+    ranked.forEach(r => {
+      const t = snapshot[r.id];
+      if (t) { t.aiReason = r.reason; t.urgencyTag = r.urgency; t.aiRank = r.rank; }
+    });
+    save();
+    renderTasks();
+  } catch (e) {
+    // silent — math sort stays
+  } finally {
+    if (banner) banner.style.display = 'none';
+  }
+}
+
+// Pomodoro
+function formatPomo(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
+function updatePomoRing() {
+  const total = pomoMode === 'focus' ? POMO_FOCUS : POMO_BREAK;
+  const frac = pomoSeconds / total;
+  const circ = 2 * Math.PI * 52;
+  const offset = circ * (1 - frac);
+  const circle = document.getElementById('pomo-circle');
+  const display = document.getElementById('pomo-display');
+  const label = document.getElementById('pomo-mode-label');
+  if (circle) {
+    circle.style.stroke = pomoMode === 'focus' ? '#c8f57a' : '#7ac8f5';
+    circle.setAttribute('stroke-dashoffset', offset.toFixed(1));
+  }
+  if (display) display.textContent = formatPomo(pomoSeconds);
+  if (label) label.textContent = pomoMode === 'focus' ? 'focus session' : 'break time';
+}
+
+function togglePomo() {
+  pomoRunning = !pomoRunning;
+  document.getElementById('pomo-btn').textContent = pomoRunning ? 'pause' : 'start';
+  if (pomoRunning) {
+    pomoInterval = setInterval(() => {
+      pomoSeconds--;
+      updatePomoRing();
+      if (pomoSeconds <= 0) {
+        clearInterval(pomoInterval);
+        pomoRunning = false;
+        document.getElementById('pomo-btn').textContent = 'start';
+        if (pomoMode === 'focus') {
+          pomoSession++;
+          totalPomoFocus += POMO_FOCUS;
+          updateSessionDots();
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Focus complete!', { body: 'Take a 5 minute break.' });
+          } else { alert('Focus session done! Take a break.'); }
+          pomoMode = 'break';
+          pomoSeconds = POMO_BREAK;
+        } else {
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Break over!', { body: 'Ready for another focus session?' });
+          } else { alert('Break over! Ready to focus?'); }
+          pomoMode = 'focus';
+          pomoSeconds = POMO_FOCUS;
+        }
+        updatePomoRing();
+      }
+    }, 1000);
+  } else {
+    clearInterval(pomoInterval);
+  }
+}
+
+function resetPomo() {
+  clearInterval(pomoInterval);
+  pomoRunning = false;
+  pomoMode = 'focus';
+  pomoSeconds = POMO_FOCUS;
+  document.getElementById('pomo-btn').textContent = 'start';
+  updatePomoRing();
+}
+
+function skipPomo() {
+  clearInterval(pomoInterval);
+  pomoRunning = false;
+  pomoMode = pomoMode === 'focus' ? 'break' : 'focus';
+  pomoSeconds = pomoMode === 'focus' ? POMO_FOCUS : POMO_BREAK;
+  document.getElementById('pomo-btn').textContent = 'start';
+  updatePomoRing();
+}
+
+function updateSessionDots() {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('d' + i);
+    if (d) d.className = 'session-dot' + (i < pomoSession % 4 ? ' filled' : '');
+  }
+}
+
+// Notification permission
+if ('Notification' in window && Notification.permission === 'default') {
+  Notification.requestPermission();
+}
+
+// Init — load from cloud, then render
+document.getElementById('date-badge').textContent = fmtDate();
+updatePomoRing();
+
+loadFromCloud().then(() => {
+  renderDump();
+  renderTasks();
+});
+
+// Poll for changes from other devices every 30 seconds
+setInterval(async () => {
+  await loadFromCloud();
+  activeListRefresh();
+  renderDump();
+}, 30000);
+</script>
+</body>
+</html>
