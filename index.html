@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://api.anthropic.com https://pqbfxewekymhcijmwzyd.supabase.co; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.anthropic.com https://pqbfxewekymhcijmwzyd.supabase.co; img-src 'self' data:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -557,7 +558,8 @@ function fmtTime(ms){
   if(h>0)return h+'h '+(m%60)+'m';
   return m+'m '+(s%60)+'s';
 }
-function uid(){return Date.now()+Math.random().toString(36).slice(2,6);}
+function uid(){return 't'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function findTask(id){return tasks.find(t=>String(t.id)===String(id));}
 
 function showPage(name){
   qaLock=false; // always release lock on navigation
@@ -834,31 +836,32 @@ function renderTaskCard(t,idx){
   const tracked=(t.trackedMs||0)+(isTracking?Date.now()-t.trackingStart:0);
   const projName=getProjName(t.projectId),areaName=getAreaName(t.areaId);
   const dlVal=t.deadline?t.deadline.slice(0,16):'';
+  const id=t.id;
   const msHtml=t.microsteps&&t.microsteps.length>0?`
-    <div class="microsteps" style="margin-top:10px" id="ms-${t.id}">
+    <div class="microsteps" style="margin-top:10px" id="ms-${id}">
       ${t.microsteps.map((ms,i)=>`
-        <div class="microstep ${ms.done?'done-step':''}" id="msi-${t.id}-${i}">
-          <div class="ms-check" onclick="toggleMicrostep('${t.id}',${i})"><div class="ms-check-inner"></div></div>
-          <div class="ms-text" id="mst-${t.id}-${i}" ondblclick="editMicrostep('${t.id}',${i})">${ms.text}</div>
-          <button onclick="deleteMicrostep('${t.id}',${i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0">✕</button>
+        <div class="microstep ${ms.done?'done-step':''}" id="msi-${id}-${i}">
+          <div class="ms-check" data-action="toggleMs" data-id="${id}" data-idx="${i}"><div class="ms-check-inner"></div></div>
+          <div class="ms-text" id="mst-${id}-${i}" data-action="editMs" data-id="${id}" data-idx="${i}">${ms.text}</div>
+          <button data-action="deleteMs" data-id="${id}" data-idx="${i}" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0 4px;flex-shrink:0">✕</button>
         </div>`).join('')}
       <div style="margin-top:6px;display:flex;gap:6px;">
-        <input placeholder="add a step..." style="flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text);outline:none;font-family:var(--sans);" id="ms-add-${t.id}" onkeydown="if(event.key==='Enter')addMicrostep('${t.id}')"/>
-        <button class="btn small" onclick="addMicrostep('${t.id}')">add</button>
+        <input placeholder="add a step..." class="ms-add-input" style="flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text);outline:none;font-family:var(--sans);" id="ms-add-${id}" data-id="${id}"/>
+        <button class="btn small" data-action="addMs" data-id="${id}">add</button>
       </div>
       <div class="feedback-row">
-        <span class="feedback-label">ai steps helpful?</span>
-        <button class="thumb ${t.feedback===1?'active':''}" onclick="rateMicrosteps('${t.id}',1)">👍</button>
-        <button class="thumb ${t.feedback===-1?'active':''}" onclick="rateMicrosteps('${t.id}',-1)">👎</button>
+        <span class="feedback-label">steps helpful?</span>
+        <button class="thumb ${t.feedback===1?'active':''}" data-action="rateMs" data-id="${id}" data-rating="1">👍</button>
+        <button class="thumb ${t.feedback===-1?'active':''}" data-action="rateMs" data-id="${id}" data-rating="-1">👎</button>
       </div>
-    </div>`:''  ;
-  return`<div class="task-card ${t.done?'done':''}" id="tc-${t.id}">
+    </div>`:'';
+  return`<div class="task-card ${t.done?'done':''}" id="tc-${id}" data-taskid="${id}">
     <div class="task-top">
       <div class="task-title">${t.text}</div>
       <div style="display:flex;gap:5px;flex-shrink:0;align-items:center">
         ${!t.done?`<span class="priority-num">${t.manualPin?'📌':'#'+(idx+1)}</span>`:''}
         <span class="tag ${t.done?'done-tag':tag}">${t.done?'done':tag}</span>
-        ${!t.done?`<button class="btn small" onclick="toggleEdit('${t.id}')" style="padding:3px 7px;font-size:10px">edit</button>`:''}
+        ${!t.done?`<button class="btn small" data-action="toggleEdit" data-id="${id}" style="padding:3px 7px;font-size:10px">edit</button>`:''}
       </div>
     </div>
     ${t.why?`<div class="task-why">"${t.why}"</div>`:''}
@@ -874,55 +877,18 @@ function renderTaskCard(t,idx){
     </div>
     <div class="task-actions">
       ${!t.done?`
-        <button class="btn small" onclick="openFocusTask('${t.id}')">focus →</button>
-        <button class="btn small" onclick="startAISteps('${t.id}')">ai steps ↗</button>
-        ${isTracking?`<button class="btn small" onclick="stopTimer('${t.id}')" style="color:var(--urgent);border-color:var(--urgent)">stop ◼</button>`:`<button class="btn small" onclick="startTimer('${t.id}')">▶ timer</button>`}
-        <button class="btn small" onclick="markDone('${t.id}')" style="color:var(--accent);border-color:var(--accent)">done ✓</button>
-      `:`<button class="btn small" onclick="undoTask('${t.id}')">undo</button>`}
-      <button class="btn danger small" onclick="deleteTask('${t.id}')">✕</button>
+        <button class="btn small" data-action="focusTask" data-id="${id}">focus →</button>
+        <button class="btn small" data-action="aiSteps" data-id="${id}">ai steps ↗</button>
+        ${isTracking
+          ?`<button class="btn small" data-action="stopTimer" data-id="${id}" style="color:var(--urgent);border-color:var(--urgent)">stop ◼</button>`
+          :`<button class="btn small" data-action="startTimer" data-id="${id}">▶ timer</button>`}
+        <button class="btn small" data-action="markDone" data-id="${id}" style="color:var(--accent);border-color:var(--accent)">done ✓</button>
+      `:`<button class="btn small" data-action="undoTask" data-id="${id}">undo</button>`}
+      <button class="btn danger small" data-action="deleteTask" data-id="${id}">✕</button>
     </div>
-    <div id="qa-${t.id}"></div>
+    <div id="qa-${id}"></div>
     ${msHtml}
-    <div class="edit-panel" id="edit-${t.id}">
-      <div class="edit-row"><div class="edit-label">task name</div><input id="ei-text-${t.id}" value="${t.text.replace(/"/g,'&quot;')}"/></div>
-      <div class="edit-row"><div class="edit-label">why / impact</div><textarea id="ei-why-${t.id}">${t.why||''}</textarea></div>
-      <div class="edit-two">
-        <div class="edit-row"><div class="edit-label">deadline</div><input type="datetime-local" id="ei-dl-${t.id}" value="${dlVal}"/></div>
-        <div class="edit-row"><div class="edit-label">eisenhower</div>
-          <select id="ei-eisen-${t.id}">
-            <option value="" ${!t.eisen?'selected':''}>— none —</option>
-            <option value="do" ${t.eisen==='do'?'selected':''}>do now</option>
-            <option value="schedule" ${t.eisen==='schedule'?'selected':''}>schedule</option>
-            <option value="delegate" ${t.eisen==='delegate'?'selected':''}>delegate</option>
-            <option value="delete" ${t.eisen==='delete'?'selected':''}>drop it</option>
-          </select>
-        </div>
-      </div>
-      <div class="edit-two">
-        <div class="edit-row"><div class="edit-label">area</div>
-          <select id="ei-area-${t.id}" onchange="updateEditProjectSelect('${t.id}')">
-            <option value="">— none —</option>
-            ${areas.map(a=>`<option value="${a.id}" ${t.areaId===a.id?'selected':''}>${a.name}</option>`).join('')}
-          </select>
-        </div>
-        <div class="edit-row"><div class="edit-label">project</div>
-          <select id="ei-project-${t.id}">
-            <option value="">— none —</option>
-            ${projects.filter(p=>!t.areaId||p.areaId===t.areaId).map(p=>`<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${p.name}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-      <div class="edit-row"><div class="edit-label">manual priority pin <span style="color:var(--text3);font-size:9px">(overrides AI)</span></div>
-        <div class="pin-row">
-          <button class="pin-btn ${t.manualPin===1?'pin-1':''}" onclick="setPin('${t.id}',1)">🔴 do first</button>
-          <button class="pin-btn ${t.manualPin===2?'pin-2':''}" onclick="setPin('${t.id}',2)">🟡 high</button>
-          <button class="pin-btn ${t.manualPin===3?'pin-3':''}" onclick="setPin('${t.id}',3)">🔵 normal</button>
-          <button class="pin-btn ${t.manualPin===4?'pin-4':''}" onclick="setPin('${t.id}',4)">⚪ low</button>
-          ${t.manualPin?`<button class="pin-btn" onclick="setPin('${t.id}',null)">clear</button>`:''}
-        </div>
-      </div>
-      <button class="edit-save" onclick="saveEdit('${t.id}')">save changes</button>
-    </div>
+    <div class="edit-panel" id="edit-${id}"></div>
   </div>`;
 }
 
@@ -979,40 +945,94 @@ function activeListRefresh(){
 
 // ── TASK ACTIONS ──
 function markDone(id){
-  const t=tasks.find(t=>t.id===id);if(!t)return;
+  const t=findTask(id);if(!t)return;
   if(t.trackingStart)stopTimer(id);
   t.done=true;t.doneAt=new Date().toISOString();save();activeListRefresh();
 }
-function undoTask(id){const t=tasks.find(t=>t.id===id);if(t){t.done=false;delete t.doneAt;save();activeListRefresh();}}
+function undoTask(id){const t=findTask(id);if(t){t.done=false;delete t.doneAt;save();activeListRefresh();}}
 function deleteTask(id){
   if(activeTimers[id]){clearInterval(activeTimers[id]);delete activeTimers[id];}
   tasks=tasks.filter(t=>t.id!==id);save();activeListRefresh();
 }
-function toggleEdit(id){document.getElementById('edit-'+id)?.classList.toggle('open');}
+function toggleEdit(id){
+  const panel=document.getElementById('edit-'+id);
+  if(!panel)return;
+  const isOpen=panel.classList.contains('open');
+  if(isOpen){
+    panel.classList.remove('open');
+    panel.innerHTML='';
+    return;
+  }
+  const t=findTask(id);if(!t)return;
+  const dlVal=t.deadline?t.deadline.slice(0,16):'';
+  panel.innerHTML=`
+    <div class="edit-row"><div class="edit-label">task name</div><input id="ei-text-${id}" value="${t.text.replace(/"/g,'&quot;')}"/></div>
+    <div class="edit-row"><div class="edit-label">why / impact</div><textarea id="ei-why-${id}">${t.why||''}</textarea></div>
+    <div class="edit-two">
+      <div class="edit-row"><div class="edit-label">deadline</div><input type="datetime-local" id="ei-dl-${id}" value="${dlVal}"/></div>
+      <div class="edit-row"><div class="edit-label">eisenhower</div>
+        <select id="ei-eisen-${id}">
+          <option value="" ${!t.eisen?'selected':''}>— none —</option>
+          <option value="do" ${t.eisen==='do'?'selected':''}>do now</option>
+          <option value="schedule" ${t.eisen==='schedule'?'selected':''}>schedule</option>
+          <option value="delegate" ${t.eisen==='delegate'?'selected':''}>delegate</option>
+          <option value="delete" ${t.eisen==='delete'?'selected':''}>drop it</option>
+        </select>
+      </div>
+    </div>
+    <div class="edit-two">
+      <div class="edit-row"><div class="edit-label">area</div>
+        <select id="ei-area-${id}" data-action="updateEditProject" data-id="${id}">
+          <option value="">— none —</option>
+          ${areas.map(a=>`<option value="${a.id}" ${t.areaId===a.id?'selected':''}>${a.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="edit-row"><div class="edit-label">project</div>
+        <select id="ei-project-${id}">
+          <option value="">— none —</option>
+          ${projects.filter(p=>!t.areaId||p.areaId===t.areaId).map(p=>`<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${p.name}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="edit-row"><div class="edit-label">manual priority pin <span style="color:var(--text3);font-size:9px">(overrides AI)</span></div>
+      <div class="pin-row">
+        <button class="pin-btn ${t.manualPin===1?'pin-1':''}" data-action="setPin" data-id="${id}" data-pin="1">🔴 do first</button>
+        <button class="pin-btn ${t.manualPin===2?'pin-2':''}" data-action="setPin" data-id="${id}" data-pin="2">🟡 high</button>
+        <button class="pin-btn ${t.manualPin===3?'pin-3':''}" data-action="setPin" data-id="${id}" data-pin="3">🔵 normal</button>
+        <button class="pin-btn ${t.manualPin===4?'pin-4':''}" data-action="setPin" data-id="${id}" data-pin="4">⚪ low</button>
+        ${t.manualPin?`<button class="pin-btn" data-action="setPin" data-id="${id}" data-pin="">clear</button>`:''}
+      </div>
+    </div>
+    <button class="edit-save" data-action="saveEdit" data-id="${id}">save changes</button>`;
+  panel.classList.add('open');
+}
 function setPin(id,val){
-  const t=tasks.find(t=>t.id===id);if(!t)return;
+  const t=findTask(id);if(!t)return;
   t.manualPin=val;t.aiRank=null;save();activeListRefresh();
 }
 function saveEdit(id){
-  const t=tasks.find(t=>t.id===id);if(!t)return;
+  const t=findTask(id);if(!t)return;
   t.text=document.getElementById(`ei-text-${id}`)?.value.trim()||t.text;
   t.why=document.getElementById(`ei-why-${id}`)?.value.trim()||null;
   t.deadline=document.getElementById(`ei-dl-${id}`)?.value||null;
   t.eisen=document.getElementById(`ei-eisen-${id}`)?.value||null;
   t.areaId=document.getElementById(`ei-area-${id}`)?.value||null;
   t.projectId=document.getElementById(`ei-project-${id}`)?.value||null;
-  t.urgencyTag=null;t.aiReason=null;save();activeListRefresh();
+  t.urgencyTag=null;t.aiReason=null;
+  const panel=document.getElementById('edit-'+id);
+  if(panel){panel.classList.remove('open');panel.innerHTML='';}
+  save();activeListRefresh();
 }
 
 // ── TIMERS ──
 function startTimer(id){
-  const t=tasks.find(t=>t.id===id);if(!t||t.trackingStart)return;
+  const t=findTask(id);if(!t||t.trackingStart)return;
   t.trackingStart=Date.now();save();
   activeTimers[id]=setInterval(()=>updateStats(),1000);
   activeListRefresh();
 }
 function stopTimer(id){
-  const t=tasks.find(t=>t.id===id);if(!t||!t.trackingStart)return;
+  const t=findTask(id);if(!t||!t.trackingStart)return;
   const elapsed=Date.now()-t.trackingStart;
   t.trackedMs=(t.trackedMs||0)+elapsed;t.trackingStart=null;
   const today=new Date().toISOString().split('T')[0];
@@ -1024,21 +1044,21 @@ function stopTimer(id){
 
 // ── MICROSTEPS ──
 function toggleMicrostep(taskId,idx){
-  const t=tasks.find(t=>t.id===taskId);if(!t)return;
+  const t=findTask(taskId);if(!t)return;
   t.microsteps[idx].done=!t.microsteps[idx].done;save();activeListRefresh();renderFocus();
 }
 function deleteMicrostep(taskId,idx){
-  const t=tasks.find(t=>t.id===taskId);if(!t)return;
+  const t=findTask(taskId);if(!t)return;
   t.microsteps.splice(idx,1);save();activeListRefresh();
 }
 function addMicrostep(taskId){
   const inp=document.getElementById(`ms-add-${taskId}`);
   const text=inp?.value.trim();if(!text)return;
-  const t=tasks.find(t=>t.id===taskId);if(!t)return;
+  const t=findTask(taskId);if(!t)return;
   t.microsteps.push({text,done:false});save();inp.value='';activeListRefresh();
 }
 function editMicrostep(taskId,idx){
-  const t=tasks.find(t=>t.id===taskId);if(!t)return;
+  const t=findTask(taskId);if(!t)return;
   const textEl=document.getElementById(`mst-${taskId}-${idx}`);if(!textEl)return;
   const cur=t.microsteps[idx].text;
   textEl.outerHTML=`<input class="ms-edit-input" id="mse-${taskId}-${idx}" value="${cur.replace(/"/g,'&quot;')}" onkeydown="if(event.key==='Enter'){event.preventDefault();event.stopPropagation();saveMicrostepEdit('${taskId}',${idx});}if(event.key==='Escape'){event.preventDefault();saveMicrostepEdit('${taskId}',${idx});}" onblur="saveMicrostepEdit('${taskId}',${idx})"/>`;
@@ -1048,7 +1068,7 @@ function saveMicrostepEdit(taskId,idx){
   const inp=document.getElementById(`mse-${taskId}-${idx}`);
   if(!inp||inp.dataset.saved)return; // guard: only run once
   inp.dataset.saved='1';
-  const t=tasks.find(t=>t.id===taskId);if(!t)return;
+  const t=findTask(taskId);if(!t)return;
   const newText=inp.value.trim()||t.microsteps[idx].text;
   t.microsteps[idx].text=newText;
   try{
@@ -1057,7 +1077,7 @@ function saveMicrostepEdit(taskId,idx){
   save();
 }
 function rateMicrosteps(taskId,rating){
-  const t=tasks.find(t=>t.id===taskId);if(!t)return;
+  const t=findTask(taskId);if(!t)return;
   t.feedback=rating;
   feedback.push({taskId,rating,task:t.text,steps:t.microsteps.map(m=>m.text),ts:new Date().toISOString()});
   save();activeListRefresh();
@@ -1065,7 +1085,7 @@ function rateMicrosteps(taskId,rating){
 
 // ── AI STEPS: inline Q&A ──
 async function startAISteps(id){
-  const t=tasks.find(t=>t.id===id);if(!t)return;
+  const t=findTask(id);if(!t)return;
   const qaEl=document.getElementById(`qa-${id}`);if(!qaEl)return;
   qaLock=true; // lock re-renders until Q&A is done
   qaEl.innerHTML=`<div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>analysing task...</span></div>`;
@@ -1094,29 +1114,21 @@ function renderQA(id,questions){
   questions.forEach((q,i)=>{
     html+=`<div style="margin-bottom:8px"><div class="qa-question">${q.q}</div>`;
     if(q.type==='choice'&&q.options){
-      html+=`<div class="qa-options">`;
-      q.options.forEach(opt=>html+=`<div class="qa-opt" onclick="toggleQAOpt(this,'qa-ans-${id}-${i}')">${opt}</div>`);
+      html+=`<div class="qa-options" data-inputid="qa-ans-${id}-${i}">`;
+      q.options.forEach(opt=>html+=`<div class="qa-opt" data-action="qaOpt" data-inputid="qa-ans-${id}-${i}">${opt}</div>`);
       html+=`</div><input type="hidden" id="qa-ans-${id}-${i}" value=""/>`;
     }else{
-      html+=`<input class="qa-input" id="qa-ans-${id}-${i}" placeholder="type your answer..." onkeydown="if(event.key==='Enter'){event.preventDefault();event.stopPropagation();}"/>`;
+      html+=`<input class="qa-input" id="qa-ans-${id}-${i}" placeholder="type your answer..."/>`;
     }
     html+=`</div>`;
   });
   html+=`<div style="display:flex;gap:8px;margin-top:6px">
-    <button class="btn primary small" onmousedown="event.preventDefault()" onclick="submitQA('${id}')">generate steps →</button>
-    <button class="btn small" onmousedown="event.preventDefault()" onclick="clearQA('${id}')">skip</button>
+    <button class="btn primary small" data-action="submitQA" data-id="${id}">generate steps →</button>
+    <button class="btn small" data-action="clearQA" data-id="${id}">skip</button>
   </div></div>`;
   qaEl.innerHTML=html;
   qaEl.dataset.qcount=questions.length;
   qaEl.dataset.questions=JSON.stringify(questions.map(q=>q.q));
-}
-
-function toggleQAOpt(el,inputId){
-  const siblings=el.parentElement.querySelectorAll('.qa-opt');
-  siblings.forEach(s=>s.classList.remove('selected'));
-  el.classList.add('selected');
-  const inp=document.getElementById(inputId);
-  if(inp)inp.value=el.textContent;
 }
 
 function clearQA(id){
@@ -1140,7 +1152,7 @@ function submitQA(id){
 }
 
 async function generateMicrosteps(id,rerenderFocus,answers){
-  const t=tasks.find(t=>t.id===id);if(!t)return;
+  const t=findTask(id);if(!t)return;
   const qaEl=document.getElementById(`qa-${id}`);
   const pastFeedback=feedback.filter(f=>f.rating===-1).slice(-3).map(f=>`Task: "${f.task}" — steps that didn't work: ${f.steps.join(', ')}`).join('\n');
   const answerText=answers&&Object.keys(answers).length>0?'\nContext answers:\n'+Object.entries(answers).map(([q,a])=>`- ${q}: ${a}`).join('\n'):'';
@@ -1279,7 +1291,7 @@ function renderFocus(){
   const el=document.getElementById('focus-content');
   const pending=sortTasks(tasks.filter(t=>!t.done));
   if(pending.length===0){el.innerHTML='<div class="empty">all done — great work</div>';return;}
-  const top=focusTaskId?(tasks.find(t=>t.id===focusTaskId)||pending[0]):pending[0];
+  const top=focusTaskId?(findTask(focusTaskId)||pending[0]):pending[0];
   const projName=getProjName(top.projectId),areaName=getAreaName(top.areaId);
   el.innerHTML=`
     <div class="focus-header">
@@ -1329,9 +1341,9 @@ function renderTracker(){
   const el=document.getElementById('tracker-list');
   const today=new Date().toISOString().split('T')[0];
   const log=timeLog[today]||{};
-  const entries=Object.entries(log).filter(([id])=>tasks.find(t=>t.id===id));
+  const entries=Object.entries(log).filter(([id])=>findTask(id));
   if(entries.length===0){el.innerHTML='<div class="empty" style="padding:16px 0">no time tracked yet</div>';return;}
-  el.innerHTML=entries.map(([id,ms])=>{const t=tasks.find(t=>t.id===id);return`<div class="tracker-row"><div class="tracker-name">${t?t.text:'deleted'}</div><div class="tracker-time">${fmtTime(ms)}</div></div>`;}).join('');
+  el.innerHTML=entries.map(([id,ms])=>{const t=findTask(id);return`<div class="tracker-row"><div class="tracker-name">${t?t.text:'deleted'}</div><div class="tracker-time">${fmtTime(ms)}</div></div>`;}).join('');
 }
 
 // ── DASHBOARD ──
@@ -1480,7 +1492,60 @@ function resetPomo(){clearInterval(pomoInterval);pomoRunning=false;pomoMode='foc
 function skipPomo(){clearInterval(pomoInterval);pomoRunning=false;pomoMode=pomoMode==='focus'?'break':'focus';pomoSeconds=pomoMode==='focus'?POMO_FOCUS:POMO_BREAK;document.getElementById('pomo-btn').textContent='start';updatePomoRing();}
 function updateSessionDots(){for(let i=0;i<4;i++){const d=document.getElementById('d'+i);if(d)d.className='session-dot'+(i<pomoSession%4?' filled':'');}}
 
-// ── INIT ──
+// ── EVENT DELEGATION — CSP safe, no inline onclick ──
+document.getElementById('content').addEventListener('click',function(e){
+  const el=e.target.closest('[data-action]');
+  if(!el)return;
+  const action=el.dataset.action;
+  const id=el.dataset.id;
+  switch(action){
+    case 'markDone': markDone(id); break;
+    case 'undoTask': undoTask(id); break;
+    case 'deleteTask': deleteTask(id); break;
+    case 'focusTask': openFocusTask(id); break;
+    case 'aiSteps': startAISteps(id); break;
+    case 'startTimer': startTimer(id); break;
+    case 'stopTimer': stopTimer(id); break;
+    case 'toggleEdit': toggleEdit(id); break;
+    case 'saveEdit': saveEdit(id); break;
+    case 'setPin': setPin(id, el.dataset.pin===''?null:+el.dataset.pin); break;
+    case 'toggleMs': toggleMicrostep(id,+el.dataset.idx); break;
+    case 'deleteMs': deleteMicrostep(id,+el.dataset.idx); break;
+    case 'addMs': addMicrostep(id); break;
+    case 'rateMs': rateMicrosteps(id,+el.dataset.rating); break;
+    case 'updateEditProject': updateEditProjectSelect(id); break;
+    case 'qaOpt': {
+      const inputId=el.dataset.inputid;
+      el.closest('.qa-options').querySelectorAll('.qa-opt').forEach(o=>o.classList.remove('selected'));
+      el.classList.add('selected');
+      const inp=document.getElementById(inputId);
+      if(inp)inp.value=el.textContent;
+      break;
+    }
+    case 'submitQA': submitQA(id); break;
+    case 'clearQA': clearQA(id); break;
+  }
+});
+
+document.getElementById('content').addEventListener('dblclick',function(e){
+  const el=e.target.closest('[data-action="editMs"]');
+  if(!el)return;
+  editMicrostep(el.dataset.id,+el.dataset.idx);
+});
+
+document.getElementById('content').addEventListener('keydown',function(e){
+  const el=e.target;
+  if(e.key==='Enter'){
+    if(el.classList.contains('ms-add-input')){
+      e.preventDefault();
+      addMicrostep(el.dataset.id);
+    }
+    if(el.classList.contains('qa-input')){
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+});
 if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();
 document.getElementById('date-badge').textContent=fmtDate();
 updatePomoRing();
