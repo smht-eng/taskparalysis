@@ -1114,29 +1114,21 @@ function renderQA(id,questions){
   questions.forEach((q,i)=>{
     html+=`<div style="margin-bottom:8px"><div class="qa-question">${q.q}</div>`;
     if(q.type==='choice'&&q.options){
-      html+=`<div class="qa-options">`;
-      q.options.forEach(opt=>html+=`<div class="qa-opt" onclick="toggleQAOpt(this,'qa-ans-${id}-${i}')">${opt}</div>`);
+      html+=`<div class="qa-options" data-inputid="qa-ans-${id}-${i}">`;
+      q.options.forEach(opt=>html+=`<div class="qa-opt" data-action="qaOpt" data-inputid="qa-ans-${id}-${i}">${opt}</div>`);
       html+=`</div><input type="hidden" id="qa-ans-${id}-${i}" value=""/>`;
     }else{
-      html+=`<input class="qa-input" id="qa-ans-${id}-${i}" placeholder="type your answer..." onkeydown="if(event.key==='Enter'){event.preventDefault();event.stopPropagation();}"/>`;
+      html+=`<input class="qa-input" id="qa-ans-${id}-${i}" placeholder="type your answer..."/>`;
     }
     html+=`</div>`;
   });
   html+=`<div style="display:flex;gap:8px;margin-top:6px">
-    <button class="btn primary small" onmousedown="event.preventDefault()" onclick="submitQA('${id}')">generate steps →</button>
-    <button class="btn small" onmousedown="event.preventDefault()" onclick="clearQA('${id}')">skip</button>
+    <button class="btn primary small" data-action="submitQA" data-id="${id}">generate steps →</button>
+    <button class="btn small" data-action="clearQA" data-id="${id}">skip</button>
   </div></div>`;
   qaEl.innerHTML=html;
   qaEl.dataset.qcount=questions.length;
   qaEl.dataset.questions=JSON.stringify(questions.map(q=>q.q));
-}
-
-function toggleQAOpt(el,inputId){
-  const siblings=el.parentElement.querySelectorAll('.qa-opt');
-  siblings.forEach(s=>s.classList.remove('selected'));
-  el.classList.add('selected');
-  const inp=document.getElementById(inputId);
-  if(inp)inp.value=el.textContent;
 }
 
 function clearQA(id){
@@ -1522,6 +1514,16 @@ document.getElementById('content').addEventListener('click',function(e){
     case 'addMs': addMicrostep(id); break;
     case 'rateMs': rateMicrosteps(id,+el.dataset.rating); break;
     case 'updateEditProject': updateEditProjectSelect(id); break;
+    case 'qaOpt': {
+      const inputId=el.dataset.inputid;
+      el.closest('.qa-options').querySelectorAll('.qa-opt').forEach(o=>o.classList.remove('selected'));
+      el.classList.add('selected');
+      const inp=document.getElementById(inputId);
+      if(inp)inp.value=el.textContent;
+      break;
+    }
+    case 'submitQA': submitQA(id); break;
+    case 'clearQA': clearQA(id); break;
   }
 });
 
@@ -1532,11 +1534,15 @@ document.getElementById('content').addEventListener('dblclick',function(e){
 });
 
 document.getElementById('content').addEventListener('keydown',function(e){
+  const el=e.target;
   if(e.key==='Enter'){
-    const el=e.target;
     if(el.classList.contains('ms-add-input')){
       e.preventDefault();
       addMicrostep(el.dataset.id);
+    }
+    if(el.classList.contains('qa-input')){
+      e.preventDefault();
+      e.stopPropagation();
     }
   }
 });
