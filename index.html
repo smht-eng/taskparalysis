@@ -888,46 +888,7 @@ function renderTaskCard(t,idx){
     </div>
     <div id="qa-${id}"></div>
     ${msHtml}
-    <div class="edit-panel" id="edit-${id}">
-      <div class="edit-row"><div class="edit-label">task name</div><input id="ei-text-${id}" value="${t.text.replace(/"/g,'&quot;')}"/></div>
-      <div class="edit-row"><div class="edit-label">why / impact</div><textarea id="ei-why-${id}">${t.why||''}</textarea></div>
-      <div class="edit-two">
-        <div class="edit-row"><div class="edit-label">deadline</div><input type="datetime-local" id="ei-dl-${id}" value="${dlVal}"/></div>
-        <div class="edit-row"><div class="edit-label">eisenhower</div>
-          <select id="ei-eisen-${id}">
-            <option value="" ${!t.eisen?'selected':''}>— none —</option>
-            <option value="do" ${t.eisen==='do'?'selected':''}>do now</option>
-            <option value="schedule" ${t.eisen==='schedule'?'selected':''}>schedule</option>
-            <option value="delegate" ${t.eisen==='delegate'?'selected':''}>delegate</option>
-            <option value="delete" ${t.eisen==='delete'?'selected':''}>drop it</option>
-          </select>
-        </div>
-      </div>
-      <div class="edit-two">
-        <div class="edit-row"><div class="edit-label">area</div>
-          <select id="ei-area-${id}" data-action="updateEditProject" data-id="${id}">
-            <option value="">— none —</option>
-            ${areas.map(a=>`<option value="${a.id}" ${t.areaId===a.id?'selected':''}>${a.name}</option>`).join('')}
-          </select>
-        </div>
-        <div class="edit-row"><div class="edit-label">project</div>
-          <select id="ei-project-${id}">
-            <option value="">— none —</option>
-            ${projects.filter(p=>!t.areaId||p.areaId===t.areaId).map(p=>`<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${p.name}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-      <div class="edit-row"><div class="edit-label">manual priority pin <span style="color:var(--text3);font-size:9px">(overrides AI)</span></div>
-        <div class="pin-row">
-          <button class="pin-btn ${t.manualPin===1?'pin-1':''}" data-action="setPin" data-id="${id}" data-pin="1">🔴 do first</button>
-          <button class="pin-btn ${t.manualPin===2?'pin-2':''}" data-action="setPin" data-id="${id}" data-pin="2">🟡 high</button>
-          <button class="pin-btn ${t.manualPin===3?'pin-3':''}" data-action="setPin" data-id="${id}" data-pin="3">🔵 normal</button>
-          <button class="pin-btn ${t.manualPin===4?'pin-4':''}" data-action="setPin" data-id="${id}" data-pin="4">⚪ low</button>
-          ${t.manualPin?`<button class="pin-btn" data-action="setPin" data-id="${id}" data-pin="">clear</button>`:''}
-        </div>
-      </div>
-      <button class="edit-save" data-action="saveEdit" data-id="${id}">save changes</button>
-    </div>
+    <div class="edit-panel" id="edit-${id}"></div>
   </div>`;
 }
 
@@ -993,7 +954,58 @@ function deleteTask(id){
   if(activeTimers[id]){clearInterval(activeTimers[id]);delete activeTimers[id];}
   tasks=tasks.filter(t=>t.id!==id);save();activeListRefresh();
 }
-function toggleEdit(id){document.getElementById('edit-'+id)?.classList.toggle('open');}
+function toggleEdit(id){
+  const panel=document.getElementById('edit-'+id);
+  if(!panel)return;
+  const isOpen=panel.classList.contains('open');
+  if(isOpen){
+    panel.classList.remove('open');
+    panel.innerHTML='';
+    return;
+  }
+  const t=findTask(id);if(!t)return;
+  const dlVal=t.deadline?t.deadline.slice(0,16):'';
+  panel.innerHTML=`
+    <div class="edit-row"><div class="edit-label">task name</div><input id="ei-text-${id}" value="${t.text.replace(/"/g,'&quot;')}"/></div>
+    <div class="edit-row"><div class="edit-label">why / impact</div><textarea id="ei-why-${id}">${t.why||''}</textarea></div>
+    <div class="edit-two">
+      <div class="edit-row"><div class="edit-label">deadline</div><input type="datetime-local" id="ei-dl-${id}" value="${dlVal}"/></div>
+      <div class="edit-row"><div class="edit-label">eisenhower</div>
+        <select id="ei-eisen-${id}">
+          <option value="" ${!t.eisen?'selected':''}>— none —</option>
+          <option value="do" ${t.eisen==='do'?'selected':''}>do now</option>
+          <option value="schedule" ${t.eisen==='schedule'?'selected':''}>schedule</option>
+          <option value="delegate" ${t.eisen==='delegate'?'selected':''}>delegate</option>
+          <option value="delete" ${t.eisen==='delete'?'selected':''}>drop it</option>
+        </select>
+      </div>
+    </div>
+    <div class="edit-two">
+      <div class="edit-row"><div class="edit-label">area</div>
+        <select id="ei-area-${id}" data-action="updateEditProject" data-id="${id}">
+          <option value="">— none —</option>
+          ${areas.map(a=>`<option value="${a.id}" ${t.areaId===a.id?'selected':''}>${a.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="edit-row"><div class="edit-label">project</div>
+        <select id="ei-project-${id}">
+          <option value="">— none —</option>
+          ${projects.filter(p=>!t.areaId||p.areaId===t.areaId).map(p=>`<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${p.name}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="edit-row"><div class="edit-label">manual priority pin <span style="color:var(--text3);font-size:9px">(overrides AI)</span></div>
+      <div class="pin-row">
+        <button class="pin-btn ${t.manualPin===1?'pin-1':''}" data-action="setPin" data-id="${id}" data-pin="1">🔴 do first</button>
+        <button class="pin-btn ${t.manualPin===2?'pin-2':''}" data-action="setPin" data-id="${id}" data-pin="2">🟡 high</button>
+        <button class="pin-btn ${t.manualPin===3?'pin-3':''}" data-action="setPin" data-id="${id}" data-pin="3">🔵 normal</button>
+        <button class="pin-btn ${t.manualPin===4?'pin-4':''}" data-action="setPin" data-id="${id}" data-pin="4">⚪ low</button>
+        ${t.manualPin?`<button class="pin-btn" data-action="setPin" data-id="${id}" data-pin="">clear</button>`:''}
+      </div>
+    </div>
+    <button class="edit-save" data-action="saveEdit" data-id="${id}">save changes</button>`;
+  panel.classList.add('open');
+}
 function setPin(id,val){
   const t=findTask(id);if(!t)return;
   t.manualPin=val;t.aiRank=null;save();activeListRefresh();
@@ -1006,7 +1018,10 @@ function saveEdit(id){
   t.eisen=document.getElementById(`ei-eisen-${id}`)?.value||null;
   t.areaId=document.getElementById(`ei-area-${id}`)?.value||null;
   t.projectId=document.getElementById(`ei-project-${id}`)?.value||null;
-  t.urgencyTag=null;t.aiReason=null;save();activeListRefresh();
+  t.urgencyTag=null;t.aiReason=null;
+  const panel=document.getElementById('edit-'+id);
+  if(panel){panel.classList.remove('open');panel.innerHTML='';}
+  save();activeListRefresh();
 }
 
 // ── TIMERS ──
