@@ -250,8 +250,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
           </button>
           <div id="detail-fields" style="display:none;flex-direction:column;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
             <div class="field-row">
-              <div class="field-label">why / impact <span style="color:var(--text3)">(what happens if you don't?)</span></div>
+              <div class="field-label">negative impact <span style="color:var(--text3)">(what breaks if you don't do this?)</span></div>
               <textarea id="f-why" placeholder="e.g. if I don't reply, we lose the contract..." rows="2"></textarea>
+            </div>
+            <div class="field-row">
+              <div class="field-label">why am i avoiding this? <span style="color:var(--text3)">(honest answer)</span></div>
+              <textarea id="f-procrastination" placeholder="e.g. scared of the feedback, don't know where to start, feels overwhelming..." rows="2"></textarea>
             </div>
             <div class="two-col">
               <div class="field-row">
@@ -293,16 +297,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
                 <div class="eisen-btn" id="e-delegate" onclick="selectEisen('delegate')">urgent + not important<br><span style="font-size:9px;opacity:0.7">delegate</span></div>
                 <div class="eisen-btn" id="e-delete" onclick="selectEisen('delete')">not urgent + not important<br><span style="font-size:9px;opacity:0.7">drop it</span></div>
               </div>
-            </div>
-            <div class="field-row">
-              <div class="field-label">ice score <span style="color:var(--text3)">(optional)</span></div>
-              <div class="ice-row">
-                <div class="ice-field"><label>impact</label><input type="range" min="1" max="10" value="5" id="ice-i" oninput="updateICE()" step="1"><div class="ice-val" id="ice-i-val">5</div></div>
-                <div class="ice-field"><label>confidence</label><input type="range" min="1" max="10" value="5" id="ice-c" oninput="updateICE()" step="1"><div class="ice-val" id="ice-c-val">5</div></div>
-                <div class="ice-field"><label>ease</label><input type="range" min="1" max="10" value="5" id="ice-e" oninput="updateICE()" step="1"><div class="ice-val" id="ice-e-val">5</div></div>
-              </div>
-              <div style="text-align:center;margin-top:4px;"><span style="font-family:var(--mono);font-size:11px;color:var(--text3)">ice: </span><span style="font-family:var(--mono);font-size:13px;color:var(--accent)" id="ice-total">125</span></div>
-              <div style="display:flex;justify-content:center;margin-top:4px;"><label style="font-family:var(--mono);font-size:10px;color:var(--text3);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="use-ice" style="accent-color:var(--accent)"> include ice in priority</label></div>
             </div>
           </div>
         </div>
@@ -357,6 +351,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
         <div class="filter-bar" id="today-filter-bar"><div class="filter-chip active" onclick="setFilter('today','all',this)">all</div></div>
         <div style="display:flex;gap:6px;align-items:center;">
           <div id="ai-rerank-banner" style="display:none;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--accent)"><div class="ai-dot" style="width:5px;height:5px;background:var(--accent);border-radius:50%;animation:pulse 1.2s ease-in-out infinite"></div>re-ranking...</div>
+          <button class="btn small" onclick="showPage('all')">all tasks →</button>
           <button class="btn small" onclick="rerunPriority()">↻ reprioritise</button>
         </div>
       </div>
@@ -443,6 +438,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
           <div class="field-row">
             <div class="field-label">project name</div>
             <input id="project-input" placeholder="e.g. Client A, Q3 Launch..." onkeydown="if(event.key==='Enter')addProject()"/>
+          </div>
+          <div class="field-row">
+            <div class="field-label">purpose <span style="color:var(--text3)">(why does this project exist?)</span></div>
+            <textarea id="project-purpose" placeholder="e.g. land our first enterprise client and prove the model works..." rows="2" style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 12px;font-family:var(--sans);font-size:13px;color:var(--text);outline:none;width:100%;resize:vertical;line-height:1.5;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
           </div>
           <div class="field-row">
             <div class="field-label">area</div>
@@ -658,8 +657,8 @@ function confirmBulkImport(){
   const projectId=document.getElementById('bulk-project')?.value||null;
   const toAdd=bulkParsed.filter(b=>!b.removed);
   toAdd.forEach(b=>{
-    dumpItems.push({id:uid(),text:b.text,why:null,deadline:null,duration:null,
-      eisen:null,ice:null,areaId,projectId,createdAt:new Date().toISOString()});
+    dumpItems.push({id:uid(),text:b.text,why:null,procrastination:null,deadline:null,duration:null,
+      eisen:null,areaId,projectId,createdAt:new Date().toISOString()});
   });
   save();renderDump();
   document.getElementById('bulk-input').value='';
@@ -674,15 +673,6 @@ function selectEisen(type){
   ['do','schedule','delegate','delete'].forEach(t=>{
     document.getElementById('e-'+t).className='eisen-btn'+(selectedEisen===t?' sel-'+t:'');
   });
-}
-
-// ── ICE ──
-function updateICE(){
-  const i=+document.getElementById('ice-i').value,c=+document.getElementById('ice-c').value,e=+document.getElementById('ice-e').value;
-  document.getElementById('ice-i-val').textContent=i;
-  document.getElementById('ice-c-val').textContent=c;
-  document.getElementById('ice-e-val').textContent=e;
-  document.getElementById('ice-total').textContent=i*c*e;
 }
 
 // ── AREA SELECT ──
@@ -711,21 +701,21 @@ function addDumpItem(){
   const input=document.getElementById('dump-input');
   const text=input.value.trim();if(!text)return;
   const why=document.getElementById('f-why').value.trim();
+  const procrastination=document.getElementById('f-procrastination').value.trim();
   const deadline=document.getElementById('f-deadline').value;
   const duration=document.getElementById('f-duration').value;
   const areaId=document.getElementById('f-area').value;
   const projectId=document.getElementById('f-project').value;
-  const useIce=document.getElementById('use-ice').checked;
-  const iceI=+document.getElementById('ice-i').value,iceC=+document.getElementById('ice-c').value,iceE=+document.getElementById('ice-e').value;
-  const item={id:uid(),text,why:why||null,deadline:deadline||null,duration:duration?+duration:null,
-    eisen:selectedEisen,ice:useIce?{i:iceI,c:iceC,e:iceE,score:iceI*iceC*iceE}:null,
+  const item={id:uid(),text,why:why||null,procrastination:procrastination||null,deadline:deadline||null,duration:duration?+duration:null,
+    eisen:selectedEisen,
     areaId:areaId||null,projectId:projectId||null,createdAt:new Date().toISOString()};
   dumpItems.push(item);save();
   input.value='';document.getElementById('f-why').value='';
+  document.getElementById('f-procrastination').value='';
   document.getElementById('f-deadline').value='';document.getElementById('f-duration').value='';
-  document.getElementById('use-ice').checked=false;selectedEisen=null;
+  selectedEisen=null;
   ['do','schedule','delegate','delete'].forEach(t=>document.getElementById('e-'+t).className='eisen-btn');
-  updateICE();renderDump();input.focus();
+  renderDump();input.focus();
   // Close detail panel so queue is visible
   const fields=document.getElementById('detail-fields');
   const arrow=document.getElementById('detail-toggle-arrow');
@@ -777,7 +767,6 @@ function getPriorityScore(t){
   let s=0;
   if(t.eisen==='do')s+=1000;else if(t.eisen==='schedule')s+=500;else if(t.eisen==='delegate')s+=200;else s+=300;
   if(t.deadline){const d=new Date(t.deadline)-new Date();if(d<0)s+=800;else if(d<3600000)s+=600;else if(d<86400000)s+=400;else if(d<604800000)s+=200;}
-  if(t.ice)s+=Math.round(t.ice.score/10);
   return s;
 }
 function getUrgencyTag(t){const s=getPriorityScore(t);return s>=900?'urgent':s>=400?'medium':'low';}
@@ -787,8 +776,17 @@ function getProjName(id){return projects.find(p=>p.id===id)?.name||'';}
 
 function isToday(t){
   const today=new Date().toISOString().split('T')[0];
+  if(t.deferredUntil&&t.deferredUntil>today)return false;
   return (t.createdAt&&t.createdAt.startsWith(today))||(t.deadline&&t.deadline.startsWith(today))||
-    (t.deadline&&new Date(t.deadline)<new Date()&&!t.done);
+    (t.deadline&&new Date(t.deadline)<new Date()&&!t.done)||(t.markedForToday&&t.markedForToday.startsWith(today));
+}
+
+function deferTask(id){
+  const t=findTask(id);if(!t)return;
+  const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+  t.deferredUntil=tomorrow.toISOString().split('T')[0];
+  t.manualPin=null;t.aiRank=null;
+  save();activeListRefresh();
 }
 
 function sortTasks(arr){
@@ -864,7 +862,8 @@ function renderTaskCard(t,idx){
         ${!t.done?`<button class="btn small" data-action="toggleEdit" data-id="${id}" style="padding:3px 7px;font-size:10px">edit</button>`:''}
       </div>
     </div>
-    ${t.why?`<div class="task-why">"${t.why}"</div>`:''}
+    ${t.why?`<div class="task-why">if not: "${t.why}"</div>`:''}
+    ${t.procrastination?`<div class="task-why" style="color:var(--medium);font-style:normal;font-size:11px">avoiding because: ${t.procrastination}</div>`:''}
     ${t.aiReason?`<div class="task-why" style="color:var(--accent);font-style:normal;font-size:11px">${t.aiReason}</div>`:''}
     <div class="task-meta">
       ${el?`<span class="tag eisen">${el}</span>`:''}
@@ -872,7 +871,6 @@ function renderTaskCard(t,idx){
       ${areaName&&!projName?`<span class="tag area-tag">${areaName}</span>`:''}
       ${t.manualPin?`<span class="tag" style="background:var(--accent-dim);color:var(--accent);border:1px solid #2a4a0a">pinned</span>`:''}
       ${dl?`<span class="task-deadline">${dl}</span>`:''}
-      ${t.ice?`<span class="task-deadline">ice:${t.ice.score}</span>`:''}
       ${tracked>0?`<span class="task-deadline">${fmtTime(tracked)}</span>`:''}
     </div>
     <div class="task-actions">
@@ -882,6 +880,7 @@ function renderTaskCard(t,idx){
         ${isTracking
           ?`<button class="btn small" data-action="stopTimer" data-id="${id}" style="color:var(--urgent);border-color:var(--urgent)">stop ◼</button>`
           :`<button class="btn small" data-action="startTimer" data-id="${id}">▶ timer</button>`}
+        <button class="btn small" data-action="deferTask" data-id="${id}" style="color:var(--text3)">defer →tmrw</button>
         <button class="btn small" data-action="markDone" data-id="${id}" style="color:var(--accent);border-color:var(--accent)">done ✓</button>
       `:`<button class="btn small" data-action="undoTask" data-id="${id}">undo</button>`}
       <button class="btn danger small" data-action="deleteTask" data-id="${id}">✕</button>
@@ -967,7 +966,8 @@ function toggleEdit(id){
   const dlVal=t.deadline?t.deadline.slice(0,16):'';
   panel.innerHTML=`
     <div class="edit-row"><div class="edit-label">task name</div><input id="ei-text-${id}" value="${t.text.replace(/"/g,'&quot;')}"/></div>
-    <div class="edit-row"><div class="edit-label">why / impact</div><textarea id="ei-why-${id}">${t.why||''}</textarea></div>
+    <div class="edit-row"><div class="edit-label">negative impact (what breaks if you don't?)</div><textarea id="ei-why-${id}">${t.why||''}</textarea></div>
+    <div class="edit-row"><div class="edit-label">why am i avoiding this?</div><textarea id="ei-procrastination-${id}">${t.procrastination||''}</textarea></div>
     <div class="edit-two">
       <div class="edit-row"><div class="edit-label">deadline</div><input type="datetime-local" id="ei-dl-${id}" value="${dlVal}"/></div>
       <div class="edit-row"><div class="edit-label">eisenhower</div>
@@ -1014,6 +1014,7 @@ function saveEdit(id){
   const t=findTask(id);if(!t)return;
   t.text=document.getElementById(`ei-text-${id}`)?.value.trim()||t.text;
   t.why=document.getElementById(`ei-why-${id}`)?.value.trim()||null;
+  t.procrastination=document.getElementById(`ei-procrastination-${id}`)?.value.trim()||null;
   t.deadline=document.getElementById(`ei-dl-${id}`)?.value||null;
   t.eisen=document.getElementById(`ei-eisen-${id}`)?.value||null;
   t.areaId=document.getElementById(`ei-area-${id}`)?.value||null;
@@ -1084,7 +1085,11 @@ function rateMicrosteps(taskId,rating){
 }
 
 // ── AI STEPS: inline Q&A ──
-async function startAISteps(id){
+function startAIStepsFocus(id){
+  // Focus view uses qa-${id} now (fixed), but after steps generate we re-render focus
+  startAISteps(id,true);
+}
+async function startAISteps(id,rerenderFocusAfter){
   const t=findTask(id);if(!t)return;
   const qaEl=document.getElementById(`qa-${id}`);if(!qaEl)return;
   qaLock=true; // lock re-renders until Q&A is done
@@ -1095,21 +1100,22 @@ async function startAISteps(id){
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',max_tokens:600,
         system:`You analyse a task and generate 2-3 clarifying questions to help break it into specific micro-steps. Return ONLY JSON: {"questions":[{"q":"question text","type":"text"|"choice","options":["opt1","opt2","opt3"]}]}. Max 3 questions, focused on: tools needed, people involved, blockers, current state. No markdown.`,
-        messages:[{role:'user',content:`Task: "${t.text}"${t.why?`\nWhy: ${t.why}`:''}${t.projectId?`\nProject: ${getProjName(t.projectId)}`:''}${t.deadline?`\nDue: ${new Date(t.deadline).toLocaleString()}`:''}\n\nGenerate clarifying questions.`}]
+        messages:[{role:'user',content:`Task: "${t.text}"${t.why?`\nNegative impact: ${t.why}`:''}${t.procrastination?`\nAvoiding because: ${t.procrastination}`:''}${t.projectId?`\nProject: ${getProjName(t.projectId)}`:''}${t.deadline?`\nDue: ${new Date(t.deadline).toLocaleString()}`:''}\n\nGenerate clarifying questions.`}]
       })
     });
     const data=await res.json();
     const raw=data.content[0].text.replace(/```json|```/g,'').trim();
     const parsed=JSON.parse(raw);
-    renderQA(id,parsed.questions);
+    renderQA(id,parsed.questions,rerenderFocusAfter);
   }catch(e){
     qaEl.innerHTML='';
-    generateMicrosteps(id,false,{});
+    generateMicrosteps(id,!!rerenderFocusAfter,{});
   }
 }
 
-function renderQA(id,questions){
+function renderQA(id,questions,rerenderFocusAfter){
   const qaEl=document.getElementById(`qa-${id}`);if(!qaEl)return;
+  qaEl.dataset.rerenderFocus=rerenderFocusAfter?'1':'';
   let html=`<div class="qa-panel"><div style="font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:0.08em;margin-bottom:8px">A FEW QUICK QUESTIONS</div>`;
   questions.forEach((q,i)=>{
     html+=`<div style="margin-bottom:8px"><div class="qa-question">${q.q}</div>`;
@@ -1134,21 +1140,23 @@ function renderQA(id,questions){
 function clearQA(id){
   qaLock=false;
   const qaEl=document.getElementById(`qa-${id}`);
+  const rf=qaEl?.dataset.rerenderFocus==='1';
   if(qaEl)qaEl.innerHTML='';
-  generateMicrosteps(id,false,{});
+  generateMicrosteps(id,rf,{});
 }
 
 function submitQA(id){
   const qaEl=document.getElementById(`qa-${id}`);if(!qaEl)return;
   const count=+qaEl.dataset.qcount||0;
   const questions=JSON.parse(qaEl.dataset.questions||'[]');
+  const rf=qaEl.dataset.rerenderFocus==='1';
   const answers={};
   for(let i=0;i<count;i++){
     const val=document.getElementById(`qa-ans-${id}-${i}`)?.value.trim();
     if(val)answers[questions[i]]=val;
   }
   qaEl.innerHTML=`<div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>generating steps...</span></div>`;
-  generateMicrosteps(id,false,answers);
+  generateMicrosteps(id,rf,answers);
 }
 
 async function generateMicrosteps(id,rerenderFocus,answers){
@@ -1162,7 +1170,7 @@ async function generateMicrosteps(id,rerenderFocus,answers){
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',max_tokens:800,
         system:`You generate hyper-specific micro-steps for tasks. Use the context answers to make steps concrete — mention specific tools, people, files by name. Return ONLY a JSON array of strings. Max 6 steps, max 12 words each. Start with the smallest possible first action.${pastFeedback?`\n\nLearn from past negative feedback:\n${pastFeedback}`:''}`,
-        messages:[{role:'user',content:`Task: "${t.text}"${t.why?`\nWhy: ${t.why}`:''}${t.duration?`\nTime available: ${t.duration} min`:''}${t.projectId?`\nProject: ${getProjName(t.projectId)}`:''}${answerText}\n\nReturn JSON array of steps only.`}]
+        messages:[{role:'user',content:`Task: "${t.text}"${t.why?`\nNegative impact: ${t.why}`:''}${t.procrastination?`\nAvoiding because: ${t.procrastination}`:''}${t.duration?`\nTime available: ${t.duration} min`:''}${t.projectId?`\nProject: ${getProjName(t.projectId)}`:''}${answerText}\n\nReturn JSON array of steps only.`}]
       })
     });
     const data=await res.json();
@@ -1222,7 +1230,7 @@ async function prioritiseAll(){
   if(banner)banner.style.display='flex';
   const snapshot=[...tasks].filter(t=>isToday(t)&&!t.done);
   const projectContext=projects.length>0?`\nProjects: ${projects.map(p=>`${p.name} (${getAreaName(p.areaId)})`).join(', ')}`:'';
-  const taskList=snapshot.map((t,i)=>`${i+1}. "${t.text}"${t.why?` (why:${t.why})`:''}${t.deadline?` (due:${new Date(t.deadline).toLocaleString()})`:''}${t.eisen?` (${t.eisen})`:''}${t.ice?` (ICE:${t.ice.score})`:''}${t.projectId?` [${getProjName(t.projectId)}]`:''}`).join('\n');
+  const taskList=snapshot.map((t,i)=>`${i+1}. "${t.text}"${t.why?` (impact:${t.why})`:''}${t.procrastination?` (blocking:${t.procrastination})`:''}${t.deadline?` (due:${new Date(t.deadline).toLocaleString()})`:''}${t.eisen?` (${t.eisen})`:''}${t.projectId?` [${getProjName(t.projectId)}]`:''}`).join('\n');
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers:{'Content-Type':'application/json'},
@@ -1246,7 +1254,7 @@ async function rerunPriority(){
   if(banner)banner.style.display='flex';
   const snapshot=tasks.filter(t=>!t.done);
   const projectContext=projects.length>0?`\nProjects: ${projects.map(p=>`${p.name} (${getAreaName(p.areaId)})`).join(', ')}`:'';
-  const taskList=snapshot.map((t,i)=>`${i+1}. "${t.text}"${t.why?` (why:${t.why})`:''}${t.deadline?` (due:${new Date(t.deadline).toLocaleString()})`:''}${t.eisen?` (${t.eisen})`:''}${t.projectId?` [${getProjName(t.projectId)}]`:''}`).join('\n');
+  const taskList=snapshot.map((t,i)=>`${i+1}. "${t.text}"${t.why?` (impact:${t.why})`:''}${t.procrastination?` (blocking:${t.procrastination})`:''}${t.deadline?` (due:${new Date(t.deadline).toLocaleString()})`:''}${t.eisen?` (${t.eisen})`:''}${t.projectId?` [${getProjName(t.projectId)}]`:''}`).join('\n');
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers:{'Content-Type':'application/json'},
@@ -1297,14 +1305,15 @@ function renderFocus(){
     <div class="focus-header">
       <div class="focus-rank">your top focus${projName?` · ${projName}`:areaName?` · ${areaName}`:''}</div>
       <div class="focus-title">${top.text}</div>
-      ${top.why?`<div class="focus-why">"${top.why}"</div>`:''}
+      ${top.why?`<div class="focus-why">if not: "${top.why}"</div>`:''}
+      ${top.procrastination?`<div class="focus-why" style="color:var(--medium);font-style:normal;font-size:12px;margin-top:4px">avoiding because: ${top.procrastination}</div>`:''}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn small" onclick="startAISteps('${top.id}')">ai steps ↗</button>
+      <button class="btn small" onclick="startAIStepsFocus('${top.id}')">ai steps ↗</button>
       ${top.trackingStart?`<button class="btn small" onclick="stopTimer('${top.id}');renderFocus()" style="color:var(--urgent);border-color:var(--urgent)">stop ◼</button>`:`<button class="btn small" onclick="startTimer('${top.id}');renderFocus()">▶ timer</button>`}
       <button class="btn small" onclick="markDone('${top.id}');focusTaskId=null;renderFocus()" style="color:var(--accent);border-color:var(--accent)">done ✓</button>
     </div>
-    <div id="qa-focus-${top.id}"></div>
+    <div id="qa-${top.id}"></div>
     ${top.microsteps&&top.microsteps.length>0?`
       <div>
         <div class="card-label">steps</div>
@@ -1415,8 +1424,11 @@ function addProject(){
   const inp=document.getElementById('project-input');
   const name=inp.value.trim();if(!name)return;
   const areaId=document.getElementById('project-area-select').value||null;
-  projects.push({id:uid(),name,areaId,createdAt:new Date().toISOString()});
-  inp.value='';save();renderProjects();populateAreaSelects();populateProjectSelect();
+  const purpose=document.getElementById('project-purpose')?.value.trim()||null;
+  projects.push({id:uid(),name,purpose,areaId,createdAt:new Date().toISOString()});
+  inp.value='';
+  const pp=document.getElementById('project-purpose');if(pp)pp.value='';
+  save();renderProjects();populateAreaSelects();populateProjectSelect();
 }
 function deleteArea(id){areas=areas.filter(a=>a.id!==id);save();renderProjects();populateAreaSelects();}
 function deleteProject(id){projects=projects.filter(p=>p.id!==id);save();renderProjects();}
@@ -1436,9 +1448,13 @@ function renderProjects(){
       <div class="project-list">
         ${aProjects.map(p=>{
           const pc=tasks.filter(t=>t.projectId===p.id).length;
-          return`<div class="project-item">
-            <div><div class="project-name">${p.name}</div><div class="project-area">${pc} tasks</div></div>
-            <button class="btn danger small" onclick="deleteProject('${p.id}')">✕</button>
+          return`<div class="project-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+              <div class="project-name">${p.name}</div>
+              <button class="btn danger small" onclick="deleteProject('${p.id}')">✕</button>
+            </div>
+            ${p.purpose?`<div style="font-size:12px;color:var(--text3);font-style:italic;line-height:1.4">"${p.purpose}"</div>`:''}
+            <div class="project-area">${pc} task${pc!==1?'s':''}</div>
           </div>`;
         }).join('')}
         ${aProjects.length===0?'<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:6px 0">no projects yet</div>':''}
@@ -1446,7 +1462,7 @@ function renderProjects(){
     </div>`;
   });
   if(standalone.length>0){
-    html+=`<div class="card" style="margin-bottom:0"><div class="area-header"><span>no area</span></div><div class="project-list">${standalone.map(p=>`<div class="project-item"><div class="project-name">${p.name}</div><button class="btn danger small" onclick="deleteProject('${p.id}')">✕</button></div>`).join('')}</div></div>`;
+    html+=`<div class="card" style="margin-bottom:0"><div class="area-header"><span>no area</span></div><div class="project-list">${standalone.map(p=>`<div class="project-item" style="flex-direction:column;align-items:flex-start;gap:4px;"><div style="display:flex;align-items:center;justify-content:space-between;width:100%;"><div class="project-name">${p.name}</div><button class="btn danger small" onclick="deleteProject('${p.id}')">✕</button></div>${p.purpose?`<div style="font-size:12px;color:var(--text3);font-style:italic">"${p.purpose}"</div>`:''}</div>`).join('')}</div></div>`;
   }
   el.innerHTML=html;
   // update project area select
@@ -1508,6 +1524,7 @@ document.getElementById('content').addEventListener('click',function(e){
     case 'stopTimer': stopTimer(id); break;
     case 'toggleEdit': toggleEdit(id); break;
     case 'saveEdit': saveEdit(id); break;
+    case 'deferTask': deferTask(id); break;
     case 'setPin': setPin(id, el.dataset.pin===''?null:+el.dataset.pin); break;
     case 'toggleMs': toggleMicrostep(id,+el.dataset.idx); break;
     case 'deleteMs': deleteMicrostep(id,+el.dataset.idx); break;
