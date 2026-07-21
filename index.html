@@ -1059,7 +1059,7 @@ function updateEditProjectSelect(taskId){
 // ── RENDER TODAY ──
 function renderTasks(){
   const list=document.getElementById('task-list');
-  buildFilterBar('tasks');
+  buildFilterBar('today');
   let today=tasks.filter(t=>isToday(t)&&!t.done);
   today=[...today,...tasks.filter(t=>isToday(t)&&t.done)];
   const filtered=filterTasks(today,'tasks');
@@ -1075,6 +1075,7 @@ function renderTasks(){
 // ── RENDER ALL ──
 function renderAllTasks(){
   const list=document.getElementById('all-task-list');
+  if(!list)return;
   buildFilterBar('all');
   const filtered=filterTasks(tasks,'all');
   const sorted=sortTasks(filtered);
@@ -1676,6 +1677,7 @@ function renderTracker(){
 
 // ── DASHBOARD ──
 function renderDashboard(){
+  if(!document.getElementById('dash-total'))return;
   document.getElementById('dash-total').textContent=tasks.length;
   document.getElementById('dash-done').textContent=tasks.filter(t=>t.done).length;
   const total=tasks.reduce((s,t)=>s+(t.trackedMs||0),0);
