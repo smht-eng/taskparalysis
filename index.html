@@ -34,11 +34,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
 .tab:hover{color:var(--text2);}
 .tab.active{color:var(--accent);border-color:var(--accent-dim);background:var(--accent-dim);}
 /* GRID */
-#grid{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
+#grid{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
 /* PANELS */
-.panel{display:none;flex-direction:column;gap:14px;padding:16px 20px 40px;overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0;}
+.panel{display:none;flex-direction:column;gap:14px;padding:16px 20px 40px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0;}
 .panel::-webkit-scrollbar{display:none;}
-.panel.visible{display:flex;}
+.panel.visible{display:flex;flex:1;}
+/* when 2 panels stack on mobile focus tab, each gets half */
+.panel.visible~.panel.visible{flex:1;border-top:1px solid var(--border);}
 /* PANEL LABELS */
 .panel-label{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px;}
 .panel-label.orange{color:var(--orange);}
@@ -58,8 +60,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
 .nav-tab.hi-a::before{background:var(--gold);}
 /* DESKTOP 2x2 */
 @media(min-width:960px){
-  #grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border);overflow:hidden;}
-  .panel{display:flex !important;overflow-y:auto;background:var(--bg);flex:none;height:100%;min-height:0;box-sizing:border-box;}
+  #grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border);}
+  .panel{display:flex !important;overflow-y:auto;overflow-x:hidden;background:var(--bg);min-height:0;max-height:100%;}
   #panel-ws{border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
   #panel-fo{border-bottom:1px solid var(--border);}
   #panel-mx{border-right:1px solid var(--border);}
@@ -68,6 +70,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
   .mobile-only{display:none !important;}
 }
 @media(max-width:959px){.desktop-only{display:none !important;}}
+@keyframes panel-pulse{0%{box-shadow:inset 0 0 0 2px var(--accent);}100%{box-shadow:inset 0 0 0 2px transparent;}}
+.panel-focus{animation:panel-pulse 0.8s ease-out forwards;}
 /* PROJECT ACCORDION */
 .proj-acc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
 .proj-acc-hdr{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;transition:background 0.1s;}
@@ -716,10 +720,11 @@ function showTab(name){
     document.querySelector(`.nav-tab[data-tab="${name}"]`)?.classList.add(map[name]);
     document.querySelectorAll('.panel.visible').forEach(p=>{p.scrollTop=0;});
   } else {
-    // desktop: scroll the relevant panel to top
+    // desktop: scroll the relevant panel to top + pulse highlight
     const panelMap={workspace:'panel-ws',focus:'panel-fo',history:'panel-hi'};
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('panel-focus'));
     const p=document.getElementById(panelMap[name]);
-    if(p)p.scrollTop=0;
+    if(p){p.scrollTop=0;p.classList.add('panel-focus');setTimeout(()=>p.classList.remove('panel-focus'),800);}
   }
   // update desktop nav highlight
   ['dt-ws','dt-fo','dt-hi'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');});
